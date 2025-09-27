@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "molavestreetbarbers",
+    "slug": "molavestreetbarbers",
+    "scheme": "molavestreetbarbers",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.fr4nc.molavestreetbarbers"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "fonts": [
+      "./assets/fonts/Satoshi-Regular.otf",
+      "./assets/fonts/Satoshi-Bold.otf"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0778eb68-52cc-4a4f-8252-9c8a7533f382"
+      }
+    },
+    "owner": "fr4nc"
+  }
+}

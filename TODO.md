@@ -1,0 +1,5 @@
+- [ ] Import useAuth from AuthContext
+- [ ] Add states: statusLoading, showRetry, retryTimeout (useRef)
+- [ ] Modify useEffect for fetching appointments
+- [ ] Update renderStatusContent for loading/retry logic
+- [ ] Add timeout management and cleanup
