@@ -340,7 +340,7 @@ export default function Notification() {
                 099-999-9999
               </Text>
               <Text style={styles.receiptNumberText}>Appointment Number:</Text>
-              <Text style={styles.receiptNumber1Text}>MSB-{selectedAppointment?.receipt_code}</Text>
+              <Text style={styles.receiptNumber1Text}>{selectedAppointment?.receipt_code}</Text>
               <Text style={styles.receiptStatusText}>Appointment Status: </Text>
               <Text style={styles.receiptStatus1Text}>{selectedAppointment?.status}</Text>
               <Text style={styles.receiptPaymentText}>Payment Method: </Text>

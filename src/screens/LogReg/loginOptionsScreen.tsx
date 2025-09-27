@@ -1,20 +1,62 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RootStackParamList } from '../../types/navigations'
-
-import React from 'react'
+import { useGoogleAuth } from '../../hooks/useGoogleAuth' // Add this import
+import NetInfo from '@react-native-community/netinfo' // Add this import if you don't have it
+import React, { useState } from 'react'
 
 //icons
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 type LoginOptionsNavigationProp = NativeStackNavigationProp<RootStackParamList,
-  'GetStarted' | 'EmailLogin' | 'SignUpOptions'
+  'GetStarted' | 'EmailLogin' | 'SignUpOptions' | 'Home' // Add 'Home' to navigate after Google login
 >
 
 export default function LoginOptions() {
   const navigation = useNavigation<LoginOptionsNavigationProp>()
+  const { signInWithGoogle, loading: googleLoading } = useGoogleAuth() // Add this hook
+  const [networkError, setNetworkError] = useState('') // Add error state
+
+  // Add Google sign-in handler
+  const handleGoogleSignIn = async () => {
+    setNetworkError('');
+    
+    // Check network connection
+    const netWorkState = await NetInfo.fetch();
+    if (!netWorkState.isConnected) {
+      Alert.alert('Network Error', 'No internet connection. Please check your network and try again.');
+      return;
+    }
+
+    try {
+      const result = await signInWithGoogle();
+      
+      if (result.success && result.data?.user) {
+        // Successfully signed in, navigate to Home
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      } else {
+        // Handle errors
+        if (result.error?.message) {
+          if (result.error.message.includes('cancelled')) {
+            // User cancelled, don't show error
+            return;
+          }
+          Alert.alert('Sign In Error', result.error.message);
+        } else {
+          Alert.alert('Error', 'Google sign-in failed. Please try again.');
+        }
+      }
+    } catch (error: any) {
+      console.error('Google sign-in failed:', error);
+      Alert.alert('Error', 'Google sign-in failed. Please try again.');
+    }
+  };
+
   return (
     <View style={{flex: 1}}>
       <TouchableOpacity onPress={() => navigation.navigate('GetStarted')} style={styles.backBtn}>
@@ -23,24 +65,40 @@ export default function LoginOptions() {
       <Text style={styles.Title}>Login to StreetCut</Text>
       <View style={styles.container}>
         <View style={styles.loginBtn}>
-          <TouchableOpacity onPress={() => navigation.navigate('EmailLogin')} style={styles.emailBtn}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('EmailLogin')} 
+            style={[styles.emailBtn, googleLoading && styles.buttonDisabled]}
+            disabled={googleLoading}
+          >
             <MaterialCommunityIcons name="email" size={24} color="white" style={{right: 58}} />
             <Text style={styles.emailText}>Continue with Email</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.googleBtn}>
-            <Image source={require('../../../assets/icon/googleLogo.png')} style={{width: 24, height: 24, right: 50}} />
-            <Text style={styles.googleText}>Continue with Google</Text>
+
+          {/* Updated Google Button with functionality */}
+          <TouchableOpacity 
+            style={[styles.googleBtn, googleLoading && styles.buttonDisabled]}
+            onPress={handleGoogleSignIn}
+            disabled={googleLoading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="black" style={{right: 50}} />
+            ) : (
+              <Image source={require('../../../assets/icon/googleLogo.png')} style={{width: 24, height: 24, right: 50}} />
+            )}
+            <Text style={styles.googleText}>
+              {googleLoading ? 'Signing in...' : 'Continue with Google'}
+            </Text>
           </TouchableOpacity>
+
           <Text style={styles.signUpText}>
             Don't have an account?
-            <TouchableOpacity onPress={() => navigation.navigate('SignUpOptions')}>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUpOptions')} disabled={googleLoading}>
               <Text style={styles.signUpText1}> Sign Up</Text>
             </TouchableOpacity>
           </Text>
         </View>
       </View>
     </View>
-
   )
 }
 
@@ -101,6 +159,10 @@ const styles = StyleSheet.create({
     color: 'black',
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
+  },
+  // Add disabled button style
+  buttonDisabled: {
+    opacity: 0.6,
   },
   facebookBtn: {
     backgroundColor: 'white',

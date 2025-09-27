@@ -13,16 +13,9 @@ import { RootStackParamList } from '../../../types/navigations'
 import { useAuth } from '../../../contexts/AuthContext'
 import NetInfo from '@react-native-community/netinfo';
 
-import { getProfileByUsername } from '../../../lib/supabase/profileFunctions';
-
 const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email)
-}
-
-const validateUsername = (username: string): boolean => {
-  const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-  return usernameRegex.test(username)
 }
 
 type LoginStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -37,9 +30,9 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 
 export default function EmailLogin() {
-  const [loginInput, setLoginInput] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [inputError, setInputError] = useState('')
+  const [emailError, setEmailError] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [loginStatus, setLoginStatus] = useState<LoginStatus>('idle')
   const [networkError, setNetworkError] = useState('')
@@ -50,10 +43,16 @@ export default function EmailLogin() {
   const handleLogin = async () => {
     setLoginStatus('loading')
     setNetworkError('')
-    setInputError('')
+    setEmailError('')
 
-    if(!loginInput.trim()) {
-      setInputError('Please enter your email or username')
+    if(!email.trim()) {
+      setEmailError('Please enter your Email')
+      setLoginStatus('idle')
+      return
+    }
+
+    if(!validateEmail(email)) {
+      setEmailError('Please enter a valid email address')
       setLoginStatus('idle')
       return
     }
@@ -72,35 +71,11 @@ export default function EmailLogin() {
         return
       }
 
-      try {
-        let emailToUse = loginInput.trim();
-
-        if (validateEmail(emailToUse)) {
-          // It's an email
-        } else if (validateUsername(emailToUse)) {
-          // It's a valid username, try to get profile
-          if (__DEV__) {
-            console.log('Input is username, trying to get profile:', emailToUse);
-          }
-          const { success, data, error } = await getProfileByUsername(emailToUse);
-          if (!success || error || !data) {
-            setNetworkError('Invalid email or username. Please try again.');
-            setLoginStatus('error');
-            setTimeout(() => setLoginStatus('idle'), 3000);
-            return;
-          }
-          emailToUse = data.email; // Assuming profile has email field
-        } else {
-          // Invalid format
-          setInputError('Please enter a valid email or username (username: 3-20 alphanumeric characters or underscore)');
-          setLoginStatus('idle');
-          return;
+      try{
+        if(__DEV__) {
+          console.log('Attempting login with:', {email: email.trim()})
         }
-
-        if (__DEV__) {
-          console.log('Attempting login with:', {email: emailToUse});
-        }
-        const result = await signIn(emailToUse, password)
+        const result = await signIn(email, password)
 
         if(result.data) {
           setLoginStatus('success')
@@ -113,7 +88,7 @@ export default function EmailLogin() {
         } else {
           if(result.error?.message) {
             if(result.error.message.includes('Invalid login credentials')) {
-              setNetworkError('Invalid email or username or password. Please try again.')
+              setNetworkError('Invalid email or password. Please try again.')
             } else if (result.error.message.includes('Email not confirmed')) {
               setNetworkError('Please verify your email before logging in.')  
             } else if (
@@ -145,7 +120,7 @@ export default function EmailLogin() {
   const getButtonStyle = () => {
     if (loginStatus === 'success') return styles.loginBtnSuccess
     if (loginStatus === 'error') return styles.loginBtnError
-    if (!loginInput || !password) return styles.loginBtnDisabled
+    if (!email || !password) return styles.loginBtnDisabled
     return styles.loginBtn
   }
 
@@ -158,18 +133,18 @@ export default function EmailLogin() {
       <KeyboardAvoidingView behavior="padding" style={styles.container}>
         <View style={styles.loginForm}>
           <Text style={styles.emailText}>Email or username</Text>
-          <TextInput
+          <TextInput 
             placeholder='Enter email or username'
             placeholderTextColor={'#505050ff'}
             autoCapitalize='none'
             autoCorrect={false}
-            keyboardType='default'
+            keyboardType='email-address'
             style={styles.emailInput}
-            value={loginInput}
-            onChangeText={setLoginInput}
+            value={email}
+            onChangeText={setEmail}
             editable={!authLoading && loginStatus !== 'loading'}
           />
-          {inputError && <Text style={styles.errorText} >{inputError}</Text>}
+          {emailError && <Text style={styles.errorText} >{emailError}</Text>}
           <Text style={styles.passwordText}>Password</Text>
           <TextInput 
             placeholder='Enter your password'
@@ -195,7 +170,7 @@ export default function EmailLogin() {
             <Text style={styles.forgotPasswordText}>Forgot password?</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLogin}
-          disabled={authLoading || loginStatus === 'loading' || loginStatus === 'success' || !loginInput || !password} style={getButtonStyle()}>
+          disabled={authLoading || loginStatus === 'loading' || loginStatus === 'success' || !email || !password} style={getButtonStyle()}>
             {loginStatus === 'loading' ? (
               <ActivityIndicator color="white" />
             ) : loginStatus === 'success' ? (

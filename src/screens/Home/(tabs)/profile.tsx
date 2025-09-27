@@ -13,6 +13,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../types/navigations';
 import { useAuth } from '../../../contexts/AuthContext';
+import { deleteProfile, getProfileById, CustomerProfile } from '../../../lib/supabase/profileFunctions';
+import { Alert } from 'react-native';
+import { useEffect } from 'react';
 
 //icons
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
@@ -24,11 +27,24 @@ type ProfileSettingsScreenNavigationProp = NativeStackNavigationProp<
 
 export default function ProfileSettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
 
   const toggleDarkMode = () => setDarkMode(previousState => !previousState);
 
   const navigation = useNavigation<ProfileSettingsScreenNavigationProp>();
   const { signOut, user } = useAuth();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user?.id) {
+        const { success, data } = await getProfileById(user.id);
+        if (success) {
+          setProfile(data);
+        }
+      }
+    };
+    fetchProfile();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -42,9 +58,37 @@ export default function ProfileSettingsScreen() {
     }
   };
 
-
-
-
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (user?.id) {
+              try {
+                const { success, error } = await deleteProfile(user.id);
+                if (success) {
+                  await signOut();
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'GetStarted' }],
+                  });
+                } else {
+                  Alert.alert('Error', (error as Error)?.message || 'Failed to delete account');
+                }
+              } catch (error) {
+                Alert.alert('Error', 'An unexpected error occurred');
+              }
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const settingsItems = [
     {
@@ -116,12 +160,14 @@ export default function ProfileSettingsScreen() {
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
             <View style={styles.profileLetterContainer}>
-              <Text style={styles.profileLetter}>F</Text>
+              <Text style={styles.profileLetter}>
+                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || 'U'}
+              </Text>
             </View>
           </View>
-          <Text style={styles.profileName}>Franc Ortega</Text>
+          <Text style={styles.profileName}>{profile?.display_name || 'User'}</Text>
           <View style={styles.locationContainer}>
-            <Text style={styles.locationText}>franccodm</Text>
+            <Text style={styles.locationText}>{profile?.username || ''}</Text>
           </View>
 
           <TouchableOpacity style={styles.upgradeButton}>
@@ -176,6 +222,16 @@ export default function ProfileSettingsScreen() {
               <Ionicons name="log-out-outline" size={24} color="#ff4444" />
             </View>
             <Text style={styles.logoutText}>Logout</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity onPress={handleDeleteAccount} style={styles.deleteButton}>
+          <View style={styles.deleteContent}>
+            <View style={styles.deleteIconContainer}>
+              <Ionicons name="trash-outline" size={24} color="#ff4444" />
+            </View>
+            <Text style={styles.deleteText}>Delete Account</Text>
           </View>
         </TouchableOpacity>
       </ScrollView>
@@ -363,6 +419,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff0f0',
   },
   logoutText: {
+    fontSize: 18,
+    color: '#ff4444',
+    fontWeight: '500',
+  },
+  deleteButton: {
+    backgroundColor: '#f8f8f8',
+    marginHorizontal: 20,
+    borderRadius: 24,
+    marginBottom: 40,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  deleteContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+  },
+  deleteIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    backgroundColor: '#fff0f0',
+  },
+  deleteText: {
     fontSize: 18,
     color: '#ff4444',
     fontWeight: '500',

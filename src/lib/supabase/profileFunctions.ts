@@ -17,11 +17,15 @@ export async function getProfileById(id: string) {
       .from('customer_profiles')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching profile by ID:', error);
       return { success: false, error };
+    }
+
+    if (!data) {
+      return { success: false, error: { message: 'Profile not found' } };
     }
 
     return { success: true, data };
@@ -32,7 +36,7 @@ export async function getProfileById(id: string) {
 }
 
 // Get profile by username
-export async function getProfileByUsername(username: string) {
+export async function getProfileByUsername(username: string): Promise<{ success: boolean; data?: CustomerProfile; error?: any }> {
   try {
     const { data, error } = await supabase
       .from('customer_profiles')
@@ -109,6 +113,26 @@ export async function checkUsernameAvailability(username: string) {
     return { success: true, available };
   } catch (err) {
     console.error('Unexpected error checking username availability:', err);
+    return { success: false, error: err };
+  }
+}
+
+// Delete profile by ID
+export async function deleteProfile(id: string) {
+  try {
+    const { data, error } = await supabase
+      .from('customer_profiles')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting profile:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error deleting profile:', err);
     return { success: false, error: err };
   }
 }
