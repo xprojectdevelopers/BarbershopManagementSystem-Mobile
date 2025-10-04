@@ -2,11 +2,11 @@
   "expo": {
     "name": "MolaveStreetBarbers",
     "slug": "MolaveStreetBarbers",
-    "version": "1.0.0",
+    "scheme": "com.fr4nc.mlvst",
+    "version": "1.6.04",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,10 +21,39 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.fr4nc.MLV_St",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#ffffff",
+      "androidMode": "default",
+      "androidCollapsedTitle": "MolaveStreetBarbers",
+      "iosDisplayInForeground": true
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-font",
+      "expo-notifications",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "690b8869-ac18-4ff9-b250-9b56e975ffcb"
+      },
+      "expoAccessToken": "prklVS3DZT6_ULadRg1He_5LWX0lr7vNes7AWMwk"
+    },
+    "owner": "fr4nc"
   }
 }
