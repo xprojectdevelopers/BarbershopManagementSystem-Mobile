@@ -46,13 +46,14 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
+      "expoAccessToken": "prklVS3DZT6_ULadRg1He_5LWX0lr7vNes7AWMwk",
       "eas": {
-        "projectId": "690b8869-ac18-4ff9-b250-9b56e975ffcb"
-      },
-      "expoAccessToken": "prklVS3DZT6_ULadRg1He_5LWX0lr7vNes7AWMwk"
+        "projectId": "eadf3c68-fdee-473c-acb0-9504f9423f2b"
+      }
     },
     "owner": "fr4nc"
   }

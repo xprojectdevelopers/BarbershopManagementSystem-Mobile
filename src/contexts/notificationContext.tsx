@@ -9,6 +9,9 @@ import React, {
     useRef,
     useState,
 } from "react";
+import { supabase } from "../lib/supabase/client";
+import { updateProfile } from "../lib/supabase/profileFunctions";
+import { PostgrestError } from "@supabase/supabase-js";
 
 interface NotificationContextType {
   expoPushToken: string | null;
@@ -46,7 +49,24 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   useEffect(() => {
     registerForPushNotificationsAsync().then(
-      (token) => setExpoPushToken(token),
+      async (token) => {
+        setExpoPushToken(token);
+        if (token) {
+          const { data, error: authError } = await supabase.auth.getUser();
+          if (authError) {
+            console.error('Auth error:', authError);
+            setError(new Error('Failed to get user'));
+            return;
+          }
+          if (data.user) {
+            const { error: profileError } = await updateProfile(data.user.id, { push_token: token });
+            if (profileError) {
+              console.error('Error updating push token:', profileError);
+              setError(new Error((profileError as PostgrestError).message || "Failed to update push token"));
+            }
+          }
+        }
+      },
       (error) => setError(error)
     );
 
@@ -60,8 +80,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       Notifications.addNotificationResponseReceivedListener((response) => {
         console.log(
           "🔔 Notification Response: ",
-          JSON.stringify(response, null, 2),
-          JSON.stringify(response.notification.request.content.data, null, 2)
+          JSON.stringify(response.notification.request.content, null, 2)
         );
         // Handle the notification response here
       });

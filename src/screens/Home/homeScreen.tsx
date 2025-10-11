@@ -1,49 +1,40 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native'
-import React, { useState, useEffect } from 'react'
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { RootStackParamList } from '../../types/navigations'
-import { useAuth } from '../../contexts/AuthContext'
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  BackHandler,
+} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigations';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
-//component
-import BottomTab from '../../components/bottomTab'
-import Carousel from '../../components/carousel'
+// Components
+import BottomTab from '../../components/bottomTab';
 
-//supabase
-import { fetchAlbums, Album } from '../../lib/supabase/albumFunctions'
+// Tabs
+import Profile from './(tabs)/profile';
+import Notification from './(tabs)/notification';
+import HaircutInspiration from '../../components/Carousel/haircutInspiration';
+import SocialMedia from '../../components/Carousel/socialMedia';
 
-//screentabs
-import Profile from './(tabs)/profile'
-import Notification from './(tabs)/notification'
-
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
+type HomeScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
   'Appointment'
->
+>;
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const { user } = useAuth();
-
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadAlbums = async () => {
-      try {
-        const fetchedAlbums = await fetchAlbums();
-        console.log('Fetched albums:', fetchedAlbums);
-        setAlbums(fetchedAlbums);
-      } catch (err) {
-        setError('Failed to load albums');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadAlbums();
-  }, []);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -51,59 +42,89 @@ export default function HomeScreen() {
     }
   }, [route.params?.initialTab]);
 
-  const allImages = albums.map(album => ({ uri: album.image_url }));
-  console.log('All images:', allImages);
+  useEffect(() => {
+    const backAction = () => {
+      if (activeTab === 'Home') {
+        BackHandler.exitApp();
+        return true;
+      } else {
+        setActiveTab('Home');
+        return true;
+      }
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove();
+  }, [activeTab]);
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
   };
 
-  const handleTestNotification = async () => {
-    if (!user) {
-      Alert.alert('Error', 'Please log in first to test push notifications.');
-      return;
-    }
-  };
-
   const renderHomeContent = () => (
-    <ScrollView 
+    <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
       showsVerticalScrollIndicator={false}
     >
+      {/* Profile Icon */}
       <View style={styles.profile}>
-        <Text style={styles.profileText}>F</Text>
+        <FontAwesome6 name="user" size={20} color="white" />
       </View>
+
+      {/* Title */}
       <Text style={styles.title}>Get started with StreetCut</Text>
-      <View style={styles.imageContainer}>
-        <Image source={require('../../../assets/img/meme.png')} style={styles.image1}/>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Appointment')}
-          style={styles.bookBtn}
+
+      {/* Image & Book Button */}
+      <ScrollView 
+        style={styles.scrollContainer} 
+        showsHorizontalScrollIndicator={false} 
+        horizontal={true} 
+        contentContainerStyle={styles.scrollContainerContent}
         >
-          <Text style={styles.bookBtnText}>Book Now</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.facescanner} />
-      <View>
-        <Text style={styles.ourWorks}>Our Works</Text>
-        {loading ? (
-          <Text style={styles.additionalText}>Loading albums...</Text>
-        ) : error ? (
-          <Text style={styles.additionalText}>{error}</Text>
-        ) : allImages.length > 0 ? (
-          <Carousel images={allImages} />
-        ) : (
-          <Text style={styles.additionalText}>No images shown</Text>
-        )}
-      </View>
+        <View style={styles.StreetCutContext1}>
+          <TouchableOpacity onPress={() => navigation.navigate('Appointment')}>
+            <Image
+              source={require('../../../assets/img/Get Started with StreetCut/img1.jpg')}
+              style={styles.StreetCutImage1}
+            />
+          </TouchableOpacity>
+            <Text style={styles.StreetCutTitle1}>Book an Appointment</Text>
+            <Text style={styles.StreetCutText1}>Your Chair is Waiting for You</Text>
+        </View>
+         <View style={styles.StreetCutContext2}>
+          <TouchableOpacity>
+            <Image 
+              source={require('../../../assets/img/Get Started with StreetCut/img2.jpg')}
+              style={styles.StreetCutImage2}
+            />
+          </TouchableOpacity>
+            <Text style={styles.StreetCutTitle2}>See More</Text>
+            <Text style={styles.StreetCutText2}>Discover Our Unique Story</Text>
+        </View>
+         <View style={styles.StreetCutContext3}>
+          <TouchableOpacity>
+            <Image 
+              source={require('../../../assets/img/Get Started with StreetCut/img3.jpg')}
+              style={styles.StreetCutImage3}
+            />
+          </TouchableOpacity>
+            <Text style={styles.StreetCutTitle3}>Click Now</Text>
+            <Text style={styles.StreetCutText3}>Know your Favorite Barber</Text>
+        </View>
+      </ScrollView>
+    <Text style={styles.haircutInspirations}>Haircut Inspirations</Text>
+    <HaircutInspiration />
+    <SocialMedia />
+     
     </ScrollView>
   );
 
   const renderNotificationContent = () => (
-    <ScrollView 
+    <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
       showsVerticalScrollIndicator={false}
     >
       <Notification />
@@ -111,9 +132,9 @@ export default function HomeScreen() {
   );
 
   const renderProfileContent = () => (
-    <ScrollView 
+    <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
       showsVerticalScrollIndicator={false}
     >
       <Profile />
@@ -136,19 +157,14 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       {/* Main Content */}
-      <View style={styles.contentContainer}>
-        {renderContent()}
-      </View>
-      
-      {/* Fixed BottomTab with absolute positioning */}
-      <View style={styles.bottomTabContainer}>
-        <BottomTab 
-          activeTab={activeTab} 
-          onTabPress={handleTabPress} 
-        />
+      <View style={styles.contentContainer}>{renderContent()}</View>
+
+      {/* Fixed BottomTab */}
+      <View style={[styles.bottomTabContainer, { bottom: insets.bottom }]}>
+        <BottomTab activeTab={activeTab} onTabPress={handleTabPress} />
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -160,14 +176,6 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
-  animatedContainer: {
-    flexDirection: 'row',
-    height: '100%',
-  },
-  screenContainer: {
-    width: Dimensions.get('window').width,
-    flex: 1,
-  },
   scrollView: {
     flex: 1,
   },
@@ -176,8 +184,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   profile: {
-    width: 50,
-    height: 50,
+    width: 45,
+    height: 45,
     borderRadius: 25,
     backgroundColor: 'black',
     alignItems: 'center',
@@ -188,7 +196,7 @@ const styles = StyleSheet.create({
   profileText: {
     fontSize: 30,
     fontFamily: 'Satoshi-Bold',
-    color: 'white'
+    color: 'white',
   },
   title: {
     fontSize: 24,
@@ -197,10 +205,44 @@ const styles = StyleSheet.create({
     marginTop: 30,
     marginBottom: 30,
   },
-  imageContainer: {
+  scrollContainer: {
+    height: 560,
+    bottom: 90
+  },
+  scrollContainerContent: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 30,
+    paddingLeft: 20,
+    paddingRight: 20,
+  },
+  StreetCutContext1: {
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  StreetCutImage1: {
+    width: 300,
+    height: 350,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  StreetCutContext2: {
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  StreetCutImage2: {
+    width: 300,
+    height: 350,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  StreetCutContext3: {
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  StreetCutImage3: {
+    width: 300,
+    height: 350,
+    borderRadius: 10,
+    marginBottom: 10,
   },
   image1: {
     width: 380,
@@ -216,7 +258,7 @@ const styles = StyleSheet.create({
     height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    bottom: 110
+    bottom: 110,
   },
   bookBtnText: {
     fontSize: 16,
@@ -224,40 +266,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
   },
-  testBtn: {
-    backgroundColor: 'blue',
-    padding: 10,
-    borderRadius: 30,
-    marginBottom: 10,
-    width: 350,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  testText: {
-    fontSize: 16,
-    color: 'white',
-    textAlign: 'center',
-    fontFamily: 'Satoshi-Bold',
-  },
-  facescanner: {
-    width: '95%',
-    height: 400,
-    backgroundColor: 'black',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    borderRadius: 10,
-    marginTop: 30,
-  },
-  additionalText: {
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
-  },
   bottomTabContainer: {
     position: 'absolute',
-    bottom: 0,
+    top: 760,
     left: 0,
     right: 0,
     zIndex: 1000,
@@ -272,11 +283,40 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 5,
   },
-  ourWorks: {
+  StreetCutTitle1: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Bold',
+    right: 80,
+  },
+  StreetCutText1: {
+    fontSize: 19,
+    fontFamily: 'Satoshi-Bold',
+    right: 25,
+  },
+  StreetCutTitle2: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Bold',
+    right: 115,
+  },
+  StreetCutText2: {
+    fontSize: 19,
+    fontFamily: 'Satoshi-Bold',
+    right: 25,
+  },
+  StreetCutTitle3: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Bold',
+    right: 110,
+  },
+  StreetCutText3: {
+    fontSize: 19,
+    fontFamily: 'Satoshi-Bold',
+    right: 25,
+  },
+  haircutInspirations: {
     fontSize: 24,
     fontFamily: 'Satoshi-Bold',
-    marginLeft: 15,
-    marginTop: 30,
-    marginBottom: 10,
-  },
-})
+    bottom: 90,
+    left: 15,
+  }
+});

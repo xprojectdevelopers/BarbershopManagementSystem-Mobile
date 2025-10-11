@@ -170,8 +170,8 @@ export default function ProfileSettingsScreen() {
             <Text style={styles.locationText}>{profile?.username || ''}</Text>
           </View>
 
-          <TouchableOpacity style={styles.upgradeButton}>
-            <Text style={styles.upgradeButtonText}>Upgrade Now - Go Pro</Text>
+          <TouchableOpacity style={styles.upgradeButton} onPress={() => navigation.navigate('PushNotifScreen')}>
+            <Text style={styles.upgradeButtonText}>Test Notifications</Text>
           </TouchableOpacity>
         </View>
 

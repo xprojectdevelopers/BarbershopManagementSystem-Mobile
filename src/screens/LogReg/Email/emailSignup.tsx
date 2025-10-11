@@ -6,20 +6,19 @@ import React, { useState } from 'react'
 import { supabase } from '../../../lib/supabase/client';
 
 //Separated Screens
-import EmailScreen from './options/emailScreen'
 import DisplayName from './options/displayName'
 import UserPassword from './options/userPassword'
 import ContactNumber from './options/contactNum'
 
-type Screen = 'EmailScreen' | 'DisplayName' | 'UserPassword' | 'ContactNumber'
+type Screen = 'DisplayName' | 'UserPassword' | 'ContactNumber'
 
 export default function EmailSignup() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [currentScreen, setCurrentScreen] = React.useState<Screen>('EmailScreen');
+  const [currentScreen, setCurrentScreen] = React.useState<Screen>('DisplayName');
   const [email, setEmail] = useState('');
   const [display_name, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
+
   const [password, setPassword] = useState('');
   const [contact_number, setContactNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,38 +28,16 @@ export default function EmailSignup() {
   const [passwordError, setPasswordError] = useState('');
 
   const goBack = () => {
-    if (currentScreen === 'DisplayName') setCurrentScreen('EmailScreen')
+    if (currentScreen === 'DisplayName') navigation.navigate('SignUpOptions')
     else if (currentScreen === 'UserPassword') setCurrentScreen('DisplayName')
     else if (currentScreen === 'ContactNumber') setCurrentScreen('UserPassword')
     else navigation.navigate('SignUpOptions')
   }
 
-  const checkUsernameAvailability = async (username: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase
-        .from('customer_profiles')
-        .select('username')
-        .eq('username', username.toLowerCase())
-        .single();
 
-      return !data; // If no data found, username is available
-    } catch (error) {
-      console.error('Username check error:', error);
-      return true; // Don't block on error
-    }
-  };
 
   const handleNext = async () => {
-    if (currentScreen === 'EmailScreen') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setEmailError('Please enter a valid email address');
-        return;
-      }
-      setEmailError('');
-      setCurrentScreen('DisplayName');
-
-    } else if (currentScreen === 'DisplayName') {
+    if (currentScreen === 'DisplayName') {
       if (!display_name.trim()) {
         Alert.alert('Error', 'Please enter your display name');
         return;
@@ -72,20 +49,12 @@ export default function EmailSignup() {
       setCurrentScreen('UserPassword');
 
     } else if (currentScreen === 'UserPassword') {
-      if (!username.trim()) {
-        Alert.alert('Error', 'Please enter a username');
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setEmailError('Please enter a valid email address');
         return;
       }
-      if (username.length < 3) {
-        Alert.alert('Error', 'Username must be at least 3 characters');
-        return;
-      }
-
-      const isAvailable = await checkUsernameAvailability(username);
-      if (!isAvailable) {
-        Alert.alert('Error', 'Username is already taken. Please choose another one.');
-        return;
-      }
+      setEmailError('');
 
       if (!password || password.length < 6) {
         setPasswordError('Password must be at least 6 characters');
@@ -109,11 +78,6 @@ export default function EmailSignup() {
       return;
     }
 
-    if (!isChecked) {
-      Alert.alert('Error', 'Please accept the terms and conditions');
-      return;
-    }
-
     setLoading(true);
 
     // Ensure contact number includes +63 prefix
@@ -130,7 +94,6 @@ export default function EmailSignup() {
         options: {
           data: {
             display_name: display_name.trim(),
-            username: username.toLowerCase().trim(),
             contact_number: formattedContactNumber
           }
         }
@@ -143,8 +106,6 @@ export default function EmailSignup() {
           Alert.alert('Error', 'This email is already registered. Please try logging in.');
         } else if (error.message?.includes('password')) {
           Alert.alert('Error', 'Password must be at least 6 characters');
-        } else if (error.message?.includes('username')) {
-          Alert.alert('Error', 'Username is already taken');
         } else {
           Alert.alert('Registration Error', error.message || 'Registration failed. Please try again.');
         }
@@ -169,7 +130,6 @@ export default function EmailSignup() {
             id: data.user.id,
             email: email.trim(),
             display_name: display_name.trim(),
-            username: username.toLowerCase().trim(),
             contact_number: formattedContactNumber
           }
         ]);
@@ -180,20 +140,35 @@ export default function EmailSignup() {
         return;
       }
 
+      // Insert into subscribers_mobile if user opted in
+      if (isChecked) {
+        const { error: subscriberError } = await supabase
+          .from('subscribers_mobile')
+          .insert([
+            {
+              user_id: data.user.id,
+              contact_number: formattedContactNumber
+            }
+          ]);
+
+        if (subscriberError) {
+          console.error('Subscriber insertion error:', subscriberError);
+          // Don't block on this error since subscription is optional
+        }
+      }
+
       Alert.alert(
         'Success',
-        'Registration completed! Please check your email to verify your account before logging in.',
+        'Registration completed!',
         [
           {
             text: 'OK',
-            onPress: async () => {
-              await supabase.auth.signOut();
+            onPress: () => {
               navigation.navigate('GetStarted');
             }
           }
         ]
       );
-
     } catch (error: any) {
       console.error('Unexpected error:', error);
       Alert.alert('Error', 'Registration failed. Please try again.');
@@ -203,17 +178,6 @@ export default function EmailSignup() {
   };
 
   const screens = {
-    EmailScreen: (
-      <EmailScreen
-        email={email}
-        setEmail={setEmail}
-        handleNext={handleNext}
-        goBack={goBack}
-        setCurrentScreen={setCurrentScreen as any}
-        loading={loading}
-        error={emailError}
-      />
-    ),
     DisplayName: (
       <DisplayName
         displayName={display_name}
@@ -226,8 +190,8 @@ export default function EmailSignup() {
     ),
     UserPassword: (
       <UserPassword
-        username={username}
-        setUsername={setUsername}
+        email={email}
+        setEmail={setEmail}
         password={password}
         setPassword={setPassword}
         showPassword={showPassword}
