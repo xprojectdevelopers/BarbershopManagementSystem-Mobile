@@ -8,9 +8,14 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 
 // supabase
 import { getAppointmentsForUser, updateAppointmentStatus } from '../../../lib/supabase/appointmentFunctions';
+import { supabase } from '../../../lib/supabase/client';
 
 // auth
 import { useAuth } from '../../../contexts/AuthContext';
+
+// notification
+import { useNotification } from '../../../contexts/notificationContext';
+import * as Notifications from 'expo-notifications';
 
 // components
 import ReceiptModal from '../../../components/Modals/receipt';
@@ -61,6 +66,7 @@ const formatDate = (dateString: string) => {
 
 export default function Notification() {
   const { user, loading: authLoading, refreshSession } = useAuth();
+  const { expoPushToken } = useNotification();
 
   const [activeTab, setActiveTab] = useState('Notification');
 
@@ -260,6 +266,41 @@ export default function Notification() {
     const { success, error } = await updateAppointmentStatus(selectedAppointment.id!, 'cancelled');
     if (success) {
       console.log('Appointment cancelled successfully');
+
+      // Send cancellation notification
+      try {
+        const { data: notificationData, error: notificationError } = await supabase.functions.invoke('sendNotification', {
+          body: {
+            expoPushToken: expoPushToken, // Use the actual expoPushToken from context
+            title: 'Appointment Cancelled',
+            body: `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
+            data: { appointmentId: selectedAppointment.id, action: 'cancelled' },
+          },
+        });
+        if (notificationError) {
+          console.log('Notification failed, but appointment cancelled:', notificationError);
+        } else {
+          console.log('Cancellation notification sent:', notificationData);
+        }
+      } catch (notificationError) {
+        console.log('Error sending cancellation notification:', notificationError);
+      }
+
+      // Also trigger a local notification immediately
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'Appointment Cancelled',
+            body: `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
+            data: { appointmentId: selectedAppointment.id, action: 'cancelled' },
+          },
+          trigger: null, // immediate
+        });
+        console.log('Local notification scheduled');
+      } catch (localNotifError) {
+        console.log('Error scheduling local notification:', localNotifError);
+      }
+
       // Refetch appointments to update the list
       const { success: fetchSuccess, data } = await getAppointmentsForUser();
       if (fetchSuccess) {

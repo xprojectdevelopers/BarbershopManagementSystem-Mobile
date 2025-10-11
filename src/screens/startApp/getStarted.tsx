@@ -1,29 +1,53 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
-import React from 'react'
-import { useNavigation } from '@react-navigation/native'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { RootStackParamList } from '../../types/navigations'
+import React from 'react';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigations';
+import { VideoView, useVideoPlayer } from 'expo-video';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type GetStartedNavigationProp = NativeStackNavigationProp<RootStackParamList,
+type GetStartedNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
   'LoginOptions' | 'SignUpOptions'
->
+>;
 
 export default function GetStarted() {
+  const navigation = useNavigation<GetStartedNavigationProp>();
+  const insets = useSafeAreaInsets();
+  const player = useVideoPlayer(require('../../../assets/img/bg.mp4'));
 
-  const navigation = useNavigation<GetStartedNavigationProp>()
+  player.loop = true;
+  player.muted = true;
+  player.play();
 
   return (
     <View style={styles.container}>
-      <View style={styles.logRegButton}>
-        <TouchableOpacity onPress={() => navigation.navigate('LoginOptions')} style={styles.loginBtn}>
+      {/* Background Video */}
+      <VideoView
+        player={player}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        nativeControls={false}
+      />
+
+      {/* Buttons Overlay */}
+      <View style={[styles.logRegButton, { bottom: 120 + insets.bottom }]}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('LoginOptions')}
+          style={styles.loginBtn}
+        >
           <Text style={styles.loginText}>Log in</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('SignUpOptions')} style={styles.signUpBtn}>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('SignUpOptions')}
+          style={styles.signUpBtn}
+        >
           <Text style={styles.signUpText}>Sign Up</Text>
         </TouchableOpacity>
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -33,38 +57,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logRegButton: {
-    top: 300,
+    position: 'absolute',
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1
   },
   loginBtn: {
-    backgroundColor: 'black',
-    padding: 10,
+    backgroundColor: 'white',
+    paddingVertical: 12,
     borderRadius: 30,
-    marginBottom: 10,
-    width: 350,
+    marginBottom: 15,
+    width: 320,
     height: 50,
+    justifyContent: 'center',
+    borderWidth: 2,
   },
   loginText: {
+    fontSize: 16,
+    textAlign: 'center',
+    fontFamily: 'Satoshi-Bold',
+  },
+  signUpBtn: {
+    borderWidth: 2,
+    borderColor: 'white',
+    borderRadius: 30,
+    width: 320,
+    height: 50,
+    justifyContent: 'center',
+  },
+  signUpText: {
     fontSize: 16,
     color: 'white',
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
   },
-  signUpBtn: {
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 30,
-    marginBottom: 10,
-    width: 350,
-    height: 50,
-  },
-  signUpText: {
-    fontSize: 16,
-    color: 'black',
-    textAlign: 'center',
-    fontFamily: 'Satoshi-Bold',
-  },
-
-})
+});

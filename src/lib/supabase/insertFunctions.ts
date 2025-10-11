@@ -1,4 +1,5 @@
 import { supabase } from './client'
+import { getProfileById } from './profileFunctions'
 
 interface InsertData {
   barber_id?: string
@@ -6,11 +7,14 @@ interface InsertData {
   sched_date?: string | null
   sched_time?: string | null
   customer_name?: string | null
+  contact_number?: string | null
+  customer_badge?: string | null
   subtotal?: number | null
   appointment_fee?: number | null
   total?: number | null
   status?: string | null
   receipt_code?: string
+  payment_method?: string | null
 }
 
 const generateReceiptCode = async () => {
@@ -51,22 +55,47 @@ export async function insertDropdownSelection(data: InsertData) {
           sched_date: data.sched_date ?? null,
           sched_time: data.sched_time ?? null,
           customer_name: data.customer_name ?? null,
+          contact_number: data.contact_number ?? null,
+          customer_badge: data.customer_badge ?? null,
           subtotal: data.subtotal ?? null,
           appointment_fee: data.appointment_fee ?? null,
           total: data.total ?? null,
           status: data.status ?? 'pending',
           receipt_code: receiptCode,
+          payment_method: data.payment_method ?? null,
         },
       ])
 
     if (error) {
       console.error('Error inserting dropdown selection:', error)
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
       return { success: false, error }
     }
 
+    // Send push notification
+    const profileResult = await getProfileById(user.id);
+    if (profileResult.success && profileResult.data?.push_token) {
+      try {
+        await supabase.functions.invoke('sendNotification', {
+          body: {
+            expoPushToken: profileResult.data.push_token,
+            title: 'Appointment Booked',
+            body: 'Your appointment has been successfully booked.',
+          },
+        });
+      } catch (notificationError) {
+        console.error('Failed to send push notification:', notificationError);
+        // Continue - appointment was successfully created
+      }
+    }
     return { success: true, data: insertedData }
   } catch (err) {
     console.error('Unexpected error inserting dropdown selection:', err)
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
     return { success: false, error: err }
   }
 }

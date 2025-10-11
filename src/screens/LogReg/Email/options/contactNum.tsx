@@ -64,7 +64,7 @@ const formatPhoneNumber = (input: string) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.content}>
         <TouchableOpacity onPress={goBack} style={styles.backBtn}>
           <AntDesign name="arrow-left" size={28} color="black" />
@@ -135,7 +135,7 @@ const formatPhoneNumber = (input: string) => {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   )
 }
 

@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useNotification } from '../contexts/notificationContext';
 import ThemedText from '../components/ThemedText';
+import { supabase } from '../lib/supabase/client';
 
 
 
@@ -15,6 +16,7 @@ const PushNotifScreen: React.FC = () => {
       return;
     }
     try {
+
       const message = {
         to: expoPushToken,
         sound: 'Discord notification',
@@ -28,7 +30,49 @@ const PushNotifScreen: React.FC = () => {
         trigger: null,
       });
       console.log('Push notification scheduled:', response);
-      Alert.alert('Success', 'Test push notification scheduled');
+      Alert.alert('Success', 'Test push notification scheduled locally');
+    } catch (error) {
+      console.error('Error sending push notification:', error);
+      Alert.alert('Error', 'Failed to send push notification');
+    }
+  };
+
+  const handleTestEdgeNotification = async () => {
+    if (!expoPushToken) {
+      Alert.alert('Error', 'No push token available');
+      return;
+    }
+    try {
+      // Try to send via Edge Function first
+      const { data, error } = await supabase.functions.invoke('sendNotification', {
+        body: {
+          expoPushToken,
+          title: 'Test Notification from Edge Function',
+          body: 'HAYOP KA GUMANA!!!!!',
+          data: { someData: 'goes here' },
+        },
+      });
+      if (error) {
+        console.log('Edge function failed, falling back to local scheduling:', error);
+        // Fallback to local scheduling
+        const message = {
+          to: expoPushToken,
+          sound: 'Discord notification',
+          title: 'Test Notification (Local Fallback)',
+          body: 'HAYOP KA GUMANA!!!!!',
+          vibrate: [0, 250],
+          data: { someData: 'goes here' },
+        };
+        const response = await Notifications.scheduleNotificationAsync({
+          content: message,
+          trigger: null,
+        });
+        console.log('Push notification scheduled locally:', response);
+        Alert.alert('Success', 'Test push notification scheduled locally (Edge Function fallback)');
+      } else {
+        console.log('Push notification sent via edge function:', data);
+        Alert.alert('Success', 'Test push notification sent via Supabase Edge Function');
+      }
     } catch (error) {
       console.error('Error sending push notification:', error);
       Alert.alert('Error', 'Failed to send push notification');
@@ -73,7 +117,11 @@ const PushNotifScreen: React.FC = () => {
       )}
 
       <TouchableOpacity style={styles.button} onPress={handleTestNotification}>
-        <ThemedText variant="button">Send Test Notification</ThemedText>
+        <ThemedText variant="button">Send Test Notification (Local)</ThemedText>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.button, styles.buttonMargin]} onPress={handleTestEdgeNotification}>
+        <ThemedText variant="button">Send Test Notification (Edge Function)</ThemedText>
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.button, styles.buttonMargin]} onPress={handleShowNotificationText}>

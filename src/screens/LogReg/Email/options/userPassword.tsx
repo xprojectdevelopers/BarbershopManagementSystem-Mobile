@@ -12,9 +12,9 @@ import React from 'react'
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 
-interface UserNamePasswordScreenProps {
-  username: string;
-  setUsername: (username:string) => void
+interface EmailPasswordScreenProps {
+  email: string;
+  setEmail: (email: string) => void
   password: string;
   setPassword: (password: string) => void
   showPassword: boolean
@@ -26,8 +26,8 @@ interface UserNamePasswordScreenProps {
 }
 
 export default function UserPassword({
-  username,
-  setUsername,
+  email,
+  setEmail,
   password,
   setPassword,
   showPassword,
@@ -36,28 +36,33 @@ export default function UserPassword({
   goBack,
   loading,
   error
-}: UserNamePasswordScreenProps) {
+}: EmailPasswordScreenProps) {
   
   return (
     <View style={{flex: 1}}>
       <TouchableOpacity onPress={goBack} style={styles.backBtn}>
         <AntDesign name="arrow-left" size={34} color="black" />
       </TouchableOpacity>
-      <Text style={styles.Title}>Next, create an account</Text>
+      <Text style={styles.Title}>Create an Account</Text>
       <View style={styles.container}>
         <View style={styles.RegisterForm}>
-          <Text style={styles.usernameText}>Username</Text>
+          <Text style={styles.emailText}>Email</Text>
           <TextInput 
-            placeholder='Enter your username'
+            placeholder='Enter your email'
             placeholderTextColor={'#505050ff'}
             autoCapitalize='none'
             autoCorrect={false}
-            style={styles.usernameInput}
-            value={username}
-            onChangeText={setUsername}  
+            style={[styles.emailInput, {borderColor: error ? "#ef4444" : "#e5e7eb"}]}
+            value={email}
+            onChangeText={setEmail}  
             editable={!loading}
           />
-          <Text style={{fontFamily: 'Satoshi-Regular', fontSize: 14, bottom: 20 }}>Choose unique username for your account.</Text>
+          {error && (
+            <Text style={{ color: "red", fontFamily: 'Satoshi-Regular', fontSize: 14, top: 10 }}>
+              {error}
+            </Text>
+          )}
+          <Text style={{fontFamily: 'Satoshi-Regular', fontSize: 14, top: -15 }}>You'll need to confirm this email later</Text>
           <Text style={styles.passwordText}>Password</Text>
           <TextInput 
             placeholder='Enter your password'
@@ -70,16 +75,11 @@ export default function UserPassword({
             onChangeText={setPassword}
             editable={!loading}
           />
-          {error && (
-          <Text style={{fontFamily: 'Satoshi-Regular', fontSize: 14, color: '#ef4444', bottom: 20 }}>
-            {error}
-          </Text>
-        )}
           <Text style={{fontFamily: 'Satoshi-Regular', fontSize: 14, top: 195, position: 'absolute' }}>Use atleast 8 characters with letters, numbers and special character.</Text>
           <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeBtn}>
             <Entypo name={showPassword ? "eye-with-line" : "eye"} size={24} color="black" />
           </TouchableOpacity>
-           <TouchableOpacity onPress={handleNext} disabled={loading || !username || !password } style={[styles.continueBtn, {opacity: (!username || !password || loading) ? 0.5 : 1,}]}>
+           <TouchableOpacity onPress={handleNext} disabled={loading || !email || !password } style={[styles.continueBtn, {opacity: (!email || !password || loading) ? 0.5 : 1,}]}>
             {loading ? (
              <ActivityIndicator color="white" />
            ) : (
@@ -116,12 +116,12 @@ const styles = StyleSheet.create({
   RegisterForm: {
     bottom:150,
   },
-  usernameText: {
+  emailText: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 16,
     bottom: 5,
   },
-  usernameInput: {
+  emailInput: {
     padding: 15,
     borderRadius: 10,
     width: 380,

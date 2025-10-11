@@ -6,6 +6,7 @@ export interface CustomerProfile {
   display_name?: string | null;
   username?: string | null;
   contact_number?: string | null;
+  push_token?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -20,6 +21,9 @@ export async function getProfileById(id: string) {
       .maybeSingle();
 
     if (error) {
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
       console.error('Error fetching profile by ID:', error);
       return { success: false, error };
     }
@@ -30,6 +34,9 @@ export async function getProfileById(id: string) {
 
     return { success: true, data };
   } catch (err) {
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
     console.error('Unexpected error fetching profile by ID:', err);
     return { success: false, error: err };
   }
@@ -45,12 +52,18 @@ export async function getProfileByUsername(username: string): Promise<{ success:
       .single();
 
     if (error) {
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
       console.error('Error fetching profile by username:', error);
       return { success: false, error };
     }
 
     return { success: true, data };
   } catch (err) {
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
     console.error('Unexpected error fetching profile by username:', err);
     return { success: false, error: err };
   }
@@ -64,12 +77,18 @@ export async function insertProfile(profile: CustomerProfile) {
       .insert([profile]);
 
     if (error) {
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
       console.error('Error inserting profile:', error);
       return { success: false, error };
     }
 
     return { success: true, data };
   } catch (err) {
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
     console.error('Unexpected error inserting profile:', err);
     return { success: false, error: err };
   }
@@ -84,12 +103,18 @@ export async function updateProfile(id: string, profile: Partial<CustomerProfile
       .eq('id', id);
 
     if (error) {
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
       console.error('Error updating profile:', error);
       return { success: false, error };
     }
 
     return { success: true, data };
   } catch (err) {
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
     console.error('Unexpected error updating profile:', err);
     return { success: false, error: err };
   }
@@ -105,6 +130,9 @@ export async function checkUsernameAvailability(username: string) {
       .limit(1);
 
     if (error) {
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
       console.error('Error checking username availability:', error);
       return { success: false, error };
     }
@@ -112,6 +140,9 @@ export async function checkUsernameAvailability(username: string) {
     const available = data.length === 0;
     return { success: true, available };
   } catch (err) {
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
     console.error('Unexpected error checking username availability:', err);
     return { success: false, error: err };
   }
@@ -126,12 +157,18 @@ export async function deleteProfile(id: string) {
       .eq('id', id);
 
     if (error) {
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
       console.error('Error deleting profile:', error);
       return { success: false, error };
     }
 
     return { success: true, data };
   } catch (err) {
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
     console.error('Unexpected error deleting profile:', err);
     return { success: false, error: err };
   }

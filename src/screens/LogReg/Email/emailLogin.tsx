@@ -130,11 +130,11 @@ export default function EmailLogin() {
         <AntDesign name="arrow-left" size={34} color="black" />
       </TouchableOpacity>
       <Text style={styles.Title}>Welcome Back</Text>
-      <KeyboardAvoidingView behavior="padding" style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.loginForm}>
-          <Text style={styles.emailText}>Email or username</Text>
+          <Text style={styles.emailText}>Email</Text>
           <TextInput 
-            placeholder='Enter email or username'
+            placeholder='Enter your email'
             placeholderTextColor={'#505050ff'}
             autoCapitalize='none'
             autoCorrect={false}
@@ -182,7 +182,7 @@ export default function EmailLogin() {
             )}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   )
 }

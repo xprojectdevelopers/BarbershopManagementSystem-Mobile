@@ -5,7 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RootStackParamList } from '../../types/navigations'
 import { useAuth } from '../../contexts/AuthContext'
 
-type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SplashScreen'>
+type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SplashScreen' | 'Home'>
 
 export default function SplashScreen() {
   const navigation = useNavigation<SplashScreenNavigationProp>()
@@ -35,9 +35,9 @@ export default function SplashScreen() {
     if (!loading && showLoading) {
       const timer = setTimeout(() => {
         if (user) {
-          navigation.navigate('Home')
-        } else { 
-          navigation.navigate('GetStarted')
+          navigation.navigate({ name: 'Home', params: {} })
+        } else {
+          navigation.navigate({ name: 'GetStarted', params: undefined })
         }
       }, 500)
       return () => clearTimeout(timer)

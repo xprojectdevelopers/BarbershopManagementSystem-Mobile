@@ -21,8 +21,8 @@ export default function BottomTab({ activeTab, onTabPress }: BottomTabProps) {
     },
     {
       key: 'Appointment',
-      label: 'Appointment',
-      icon: 'stool-outline',
+      label: 'Notification',
+      icon: 'bell-outline',
       IconComponent: MaterialCommunityIcons
     },
     {
@@ -47,10 +47,10 @@ export default function BottomTab({ activeTab, onTabPress }: BottomTabProps) {
               onPress={() => onTabPress(tab.key)}
             >
               <IconComponent
-                name={tab.icon} 
-                size={25} 
-                color={isActive ? '#000000ff' : '#666666'} 
-                style={styles.tabIcon} 
+                name={tab.icon as any}
+                size={25}
+                color={isActive ? '#000000ff' : '#666666'}
+                style={styles.tabIcon}
               />
               <Text style={[
                 styles.bottomTabText,
