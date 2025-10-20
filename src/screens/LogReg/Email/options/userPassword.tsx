@@ -13,8 +13,8 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 
 interface EmailPasswordScreenProps {
-  email: string;
-  setEmail: (email: string) => void
+  displayName: string;
+  setDisplayName: (displayName: string) => void
   password: string;
   setPassword: (password: string) => void
   showPassword: boolean
@@ -26,8 +26,8 @@ interface EmailPasswordScreenProps {
 }
 
 export default function UserPassword({
-  email,
-  setEmail,
+  displayName,
+  setDisplayName,
   password,
   setPassword,
   showPassword,
@@ -46,15 +46,15 @@ export default function UserPassword({
       <Text style={styles.Title}>Create an Account</Text>
       <View style={styles.container}>
         <View style={styles.RegisterForm}>
-          <Text style={styles.emailText}>Email</Text>
-          <TextInput 
-            placeholder='Enter your email'
+          <Text style={styles.emailText}>Display Name</Text>
+          <TextInput
+            placeholder='Enter your display name'
             placeholderTextColor={'#505050ff'}
-            autoCapitalize='none'
+            autoCapitalize='words'
             autoCorrect={false}
             style={[styles.emailInput, {borderColor: error ? "#ef4444" : "#e5e7eb"}]}
-            value={email}
-            onChangeText={setEmail}  
+            value={displayName}
+            onChangeText={setDisplayName}
             editable={!loading}
           />
           {error && (
@@ -62,7 +62,7 @@ export default function UserPassword({
               {error}
             </Text>
           )}
-          <Text style={{fontFamily: 'Satoshi-Regular', fontSize: 14, top: -15 }}>You'll need to confirm this email later</Text>
+          <Text style={{fontFamily: 'Satoshi-Regular', fontSize: 14, top: -15 }}>This will be your public name</Text>
           <Text style={styles.passwordText}>Password</Text>
           <TextInput 
             placeholder='Enter your password'
@@ -79,7 +79,7 @@ export default function UserPassword({
           <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeBtn}>
             <Entypo name={showPassword ? "eye-with-line" : "eye"} size={24} color="black" />
           </TouchableOpacity>
-           <TouchableOpacity onPress={handleNext} disabled={loading || !email || !password } style={[styles.continueBtn, {opacity: (!email || !password || loading) ? 0.5 : 1,}]}>
+           <TouchableOpacity onPress={handleNext} disabled={loading || !displayName || !password } style={[styles.continueBtn, {opacity: (!displayName || !password || loading) ? 0.5 : 1,}]}>
             {loading ? (
              <ActivityIndicator color="white" />
            ) : (

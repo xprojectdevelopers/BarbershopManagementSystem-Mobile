@@ -1,82 +1,121 @@
-console.log("Send Notification Function")
+// supabase/functions/send-push/index.ts
+import { Expo, ExpoPushMessage, ExpoPushErrorTicket, ExpoPushSuccessTicket } from "expo-server-sdk";
+import { createClient } from "@supabase/supabase-js";
 
-Deno.serve(async (req) => {
-  console.log("User JWT:", req.headers.get('Authorization'));
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+// 🧩 Initialize Supabase
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+);
 
-  // For testing, skip auth check
-  // const authHeader = req.headers.get('Authorization');
-  // if (!authHeader) {
-  //   return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-  //     status: 401,
-  //     headers: { "Content-Type": "application/json" },
-  //   });
-  // }
+interface NotificationRequest {
+  expoPushToken: string;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  sound?: "default" | null;
+  badge?: number;
+  priority?: "default" | "normal" | "high";
+  channelId?: string;
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { expoPushToken, title, body, data } = await req.json();
+    const body: NotificationRequest = await req.json();
+    const { expoPushToken, title, message, data, sound = "default", badge, priority = "high", channelId } = body;
 
-    if (!expoPushToken) {
-      console.log('No expoPushToken provided, skipping notification send');
+    console.log("📨 NEW NOTIFICATION REQUEST");
+    console.log("🎯 Target Token:", expoPushToken);
+    console.log("📋 Title:", title);
+    console.log("💬 Message:", message);
+
+    if (!expoPushToken || !title || !message) {
       return new Response(
-         JSON.stringify({ success: false, skipped: true, message: 'No push token provided' }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
+        JSON.stringify({ success: false, error: "Missing required fields: expoPushToken, title, message" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
-    const message = {
-      to: expoPushToken,
-      title: title || 'Notification',
-      body: body || 'You have a new notification',
-      data: data || {},
-    };
+    const expoAccessToken = Deno.env.get("EXPO_ACCESS_TOKEN");
+    if (!expoAccessToken)
+      return new Response(JSON.stringify({ success: false, error: "Missing EXPO_ACCESS_TOKEN" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
 
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('EXPO_ACCESS_TOKEN')}`,
+    const expo = new Expo({ accessToken: expoAccessToken, useFcmV1: true });
+
+    if (!Expo.isExpoPushToken(expoPushToken))
+      return new Response(JSON.stringify({ success: false, error: `Invalid token: ${expoPushToken}` }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+
+    const messages: ExpoPushMessage[] = [
+      {
+        to: expoPushToken,
+        sound,
+        title,
+        body: message,
+        data: data || {},
+        priority,
+        badge,
+        channelId: channelId || "default",
       },
-      body: JSON.stringify([message]),
-    });
+    ];
 
-    const result = await response.json();
+    // 🟢 Send instantly — not queued manually
+    const [ticket] = await expo.sendPushNotificationsAsync(messages);
+    console.log("📬 Ticket:", ticket);
 
-   if (!response.ok) {
-      console.error('Expo API error:', result);
+    // 🧾 Log immediately in Supabase
+    const sent_at = new Date().toISOString();
+    await supabase.from("notification_logs").insert([
+      {
+        device_token: expoPushToken,
+        message,
+        status: ticket.status === "ok" ? "sent" : "error",
+        details: ticket,
+        sent_at,
+      },
+    ]);
+
+    if (ticket.status === "error") {
+      const errorTicket = ticket as ExpoPushErrorTicket;
+      console.error("❌ Expo Error:", errorTicket.details);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to send notification' }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
+        JSON.stringify({
+          success: false,
+          error: errorTicket.message,
+          details: errorTicket.details,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
+
+    const successTicket = ticket as ExpoPushSuccessTicket;
 
     return new Response(
-      JSON.stringify({ success: true, result }),
-      { headers: { "Content-Type": "application/json" } },
+      JSON.stringify({
+        success: true,
+        message: "Push sent instantly ⚡",
+        receiptId: successTicket.id,
+        sent_at,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
-  } catch (error) {
-    console.error('Error sending notification:', error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
+  } catch (err) {
+    console.error("💥 ERROR:", err);
+    return new Response(JSON.stringify({ success: false, error: String(err) }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
-      headers: { "Content-Type": "application/json" },
     });
   }
-})
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
-
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/sendNotification' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-    --header 'Content-Type: application/json' \
-     --data '{"expoPushToken":"ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]","title":"Test","body":"This is a test notification","data":{}}'
-
-*/
+});

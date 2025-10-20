@@ -1,169 +1,208 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import { useNotification } from '../contexts/notificationContext';
-import ThemedText from '../components/ThemedText';
-import { supabase } from '../lib/supabase/client';
+import React, { useEffect, useState } from "react";
+import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from "react-native";
+import * as Notifications from "expo-notifications";
+import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase/client";
+import { useNotification } from "../contexts/notificationContext";
 
-
+// Optional: fallback Supabase client if context is unavailable
+const localSupabase = createClient(
+  "https://YOUR_SUPABASE_URL.supabase.co",
+  "YOUR_SUPABASE_ANON_KEY"
+);
 
 const PushNotifScreen: React.FC = () => {
-  const { expoPushToken, notification, error } = useNotification();
+  const { expoPushToken } = useNotification();
+  const [logs, setLogs] = useState<string[]>([]);
+  const [lastNotificationTime, setLastNotificationTime] = useState<Date | null>(null);
 
+  const log = (message: string) => {
+    console.log(message);
+    setLogs((prev) => [message, ...prev]);
+  };
+
+  // ✅ Listen for incoming notifications and mark as delivered
+  useEffect(() => {
+    const subscription = Notifications.addNotificationReceivedListener(async (notification) => {
+      const receivedAt = new Date();
+      setLastNotificationTime(receivedAt);
+
+      log(`📬 Notification received at ${receivedAt.toLocaleTimeString()}`);
+      console.log("📩 Notification details:", notification);
+
+      const deviceToken = notification.request.identifier;
+      const receivedAtISO = receivedAt.toISOString();
+
+      const { error } = await localSupabase
+        .from("notification_logs")
+        .update({
+          status: "delivered",
+          delivered_at: receivedAtISO,
+        })
+        .eq("device_token", deviceToken);
+
+      if (error) log(`⚠️ Error updating delivery: ${error.message}`);
+      else log("✅ Delivery logged successfully in Supabase.");
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  // 💾 Save Expo push token to Supabase (manually if needed)
+  const savePushToken = async () => {
+    try {
+      const { data, error: userError } = await supabase.auth.getUser();
+      const user = data?.user;
+
+      if (userError || !user) {
+        log("❌ No user logged in. Cannot save push token.");
+        return;
+      }
+
+      if (!expoPushToken) {
+        log("⚠️ No Expo push token to save.");
+        return;
+      }
+
+      log(`💾 Saving push token for user: ${user.id}`);
+
+      const { error } = await supabase
+        .from("customer_profiles")
+        .update({
+          push_token: expoPushToken,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      log(`✅ Push token saved successfully: ${expoPushToken}`);
+    } catch (err: unknown) {
+      log(`🔥 Error saving push token: ${String(err)}`);
+    }
+  };
+
+  // 🚀 Send test notification manually
   const handleTestNotification = async () => {
     if (!expoPushToken) {
-      Alert.alert('Error', 'No push token available');
+      log("❌ No Expo push token available.");
       return;
     }
-    try {
 
-      const message = {
-        to: expoPushToken,
-        sound: 'Discord notification',
-        title: 'Test Notification',
-        body: 'HAYOP KA GUMANA!!!!!',
-        vibrate: [0, 250],
-        data: { someData: 'goes here' },
-      };
-      const response = await Notifications.scheduleNotificationAsync({
-        content: message,
-        trigger: null,
-      });
-      console.log('Push notification scheduled:', response);
-      Alert.alert('Success', 'Test push notification scheduled locally');
-    } catch (error) {
-      console.error('Error sending push notification:', error);
-      Alert.alert('Error', 'Failed to send push notification');
-    }
-  };
+    log(`🚀 Sending test notification for token: ${expoPushToken}`);
 
-  const handleTestEdgeNotification = async () => {
-    if (!expoPushToken) {
-      Alert.alert('Error', 'No push token available');
-      return;
-    }
     try {
-      // Try to send via Edge Function first
-      const { data, error } = await supabase.functions.invoke('sendNotification', {
+      const { data, error: userError } = await supabase.auth.getUser();
+      const user = data?.user;
+
+      if (userError || !user) {
+        log("❌ User not logged in.");
+        return;
+      }
+
+      const startTime = new Date();
+
+      const { data: result, error } = await supabase.functions.invoke("sendNotification", {
         body: {
           expoPushToken,
-          title: 'Test Notification from Edge Function',
-          body: 'HAYOP KA GUMANA!!!!!',
-          data: { someData: 'goes here' },
+          title: "Molave Street Barbers 💈",
+          message: "Instant test from Supabase Edge Function!",
         },
       });
-      if (error) {
-        console.log('Edge function failed, falling back to local scheduling:', error);
-        // Fallback to local scheduling
-        const message = {
-          to: expoPushToken,
-          sound: 'Discord notification',
-          title: 'Test Notification (Local Fallback)',
-          body: 'HAYOP KA GUMANA!!!!!',
-          vibrate: [0, 250],
-          data: { someData: 'goes here' },
-        };
-        const response = await Notifications.scheduleNotificationAsync({
-          content: message,
-          trigger: null,
-        });
-        console.log('Push notification scheduled locally:', response);
-        Alert.alert('Success', 'Test push notification scheduled locally (Edge Function fallback)');
-      } else {
-        console.log('Push notification sent via edge function:', data);
-        Alert.alert('Success', 'Test push notification sent via Supabase Edge Function');
-      }
-    } catch (error) {
-      console.error('Error sending push notification:', error);
-      Alert.alert('Error', 'Failed to send push notification');
-    }
-  };
 
-  const handleShowNotificationText = () => {
-    if (notification) {
-      const content = notification.request.content;
-      Alert.alert('Latest Notification Text', `Title: ${content.title}\nBody: ${content.body}`);
-    } else {
-      Alert.alert('No Notification', 'No latest notification available');
+      const endTime = new Date();
+      const duration = (endTime.getTime() - startTime.getTime()) / 1000;
+
+      if (error) {
+        log(`❌ Supabase Function Error: ${error.message}`);
+        return;
+      }
+
+      log(`✅ Supabase Function invoked in ${duration}s.`);
+      log("📦 Full server response:");
+      log(JSON.stringify(result, null, 2));
+
+      if (result?.success) {
+        log("📲 Notification queued successfully!");
+      } else {
+        log("⚠️ Notification may have failed. Check server logs.");
+      }
+    } catch (err: unknown) {
+      log(`🔥 Exception while calling server: ${String(err)}`);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <ThemedText variant="title" style={styles.title}>
-        Push Notifications
-      </ThemedText>
-
-      <ThemedText variant="body" style={styles.tokenLabel}>
-        Expo Push Token:
-      </ThemedText>
-      <ThemedText variant="caption" style={styles.token}>
-        {expoPushToken || 'Not available'}
-      </ThemedText>
-
-      {notification && (
-        <View style={styles.notificationContainer}>
-          <ThemedText variant="subtitle">Latest Notification:</ThemedText>
-          <ThemedText variant="body">
-            {JSON.stringify(notification.request.content, null, 2)}
-          </ThemedText>
-        </View>
-      )}
-
-      {error && (
-        <ThemedText variant="caption" style={styles.error}>
-          Error: {error.message}
-        </ThemedText>
-      )}
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>📱 Push Notification Tester</Text>
 
       <TouchableOpacity style={styles.button} onPress={handleTestNotification}>
-        <ThemedText variant="button">Send Test Notification (Local)</ThemedText>
+        <Text style={styles.buttonText}>Send Test Notification</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, styles.buttonMargin]} onPress={handleTestEdgeNotification}>
-        <ThemedText variant="button">Send Test Notification (Edge Function)</ThemedText>
+      <TouchableOpacity style={styles.secondaryButton} onPress={savePushToken}>
+        <Text style={styles.secondaryButtonText}>Save Push Token</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, styles.buttonMargin]} onPress={handleShowNotificationText}>
-        <ThemedText variant="button">Show Notification Text</ThemedText>
-      </TouchableOpacity>
-    </View>
+      {lastNotificationTime && (
+        <Text style={styles.deliveryTime}>
+          🕒 Last delivery: {lastNotificationTime.toLocaleTimeString()}
+        </Text>
+      )}
+
+      <Text style={styles.logTitle}>Logs</Text>
+      <View style={styles.logBox}>
+        {logs.length > 0 ? (
+          logs.map((line, index) => (
+            <Text key={index} style={styles.logText}>
+              {line}
+            </Text>
+          ))
+        ) : (
+          <Text style={styles.logEmpty}>No logs yet.</Text>
+        )}
+      </View>
+
+      <View style={styles.tokenContainer}>
+        <Text style={styles.tokenLabel}>Expo Push Token:</Text>
+        <Text style={styles.tokenText}>{expoPushToken || "Not available"}</Text>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  title: {
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  tokenLabel: {
+  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  title: { fontSize: 22, fontWeight: "bold", textAlign: "center", marginBottom: 30 },
+  button: {
+    backgroundColor: "#007bff",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
     marginBottom: 10,
   },
-  token: {
-    marginBottom: 20,
-    fontFamily: 'monospace',
-  },
-  notificationContainer: {
-    marginBottom: 20,
-  },
-  error: {
-    color: 'red',
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  secondaryButton: {
+    backgroundColor: "#6c757d",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
     marginBottom: 20,
   },
-  button: {
-    backgroundColor: '#000',
-    padding: 15,
-    borderRadius: 30,
-    alignItems: 'center',
+  secondaryButtonText: { color: "#fff", fontSize: 14 },
+  deliveryTime: { textAlign: "center", color: "#333", marginBottom: 10 },
+  logTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  logBox: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+    padding: 10,
+    minHeight: 150,
   },
-  buttonMargin: {
-    marginTop: 10,
-  },
+  logText: { fontSize: 13, color: "#333", marginBottom: 4 },
+  logEmpty: { fontSize: 13, color: "#999", textAlign: "center" },
+  tokenContainer: { marginTop: 20 },
+  tokenLabel: { fontWeight: "bold", marginBottom: 5 },
+  tokenText: { fontFamily: "monospace", color: "#333", fontSize: 13 },
 });
 
 export default PushNotifScreen;

@@ -69,7 +69,6 @@ const styles = StyleSheet.create({
     width: 320,
     height: 50,
     justifyContent: 'center',
-    borderWidth: 2,
   },
   loginText: {
     fontSize: 16,

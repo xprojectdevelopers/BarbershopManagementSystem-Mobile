@@ -18,7 +18,7 @@ import { Alert } from 'react-native';
 import { useEffect } from 'react';
 
 //icons
-import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, Feather, FontAwesome6 } from '@expo/vector-icons';
 
 type ProfileSettingsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -160,9 +160,7 @@ export default function ProfileSettingsScreen() {
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
             <View style={styles.profileLetterContainer}>
-              <Text style={styles.profileLetter}>
-                {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || 'U'}
-              </Text>
+              <FontAwesome6 name="user" size={40} color="white" />
             </View>
           </View>
           <Text style={styles.profileName}>{profile?.display_name || 'User'}</Text>

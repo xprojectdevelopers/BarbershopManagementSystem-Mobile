@@ -7,18 +7,18 @@ interface TimeSlot {
 }
 
 const timeSlots: TimeSlot[] = [
-  { id: 1, time: '8:00 am' },
-  { id: 2, time: '9:00 am' },
-  { id: 3, time: '10:00 am' },
-  { id: 4, time: '11:00 am' },
-  { id: 5, time: '12:00 pm' },
-  { id: 6, time: '1:00 pm' },
-  { id: 7, time: '2:00 pm' },
-  { id: 8, time: '3:00 pm' },
-  { id: 9, time: '4:00 pm' },
-  { id: 10, time: '5:00 pm' },
-  { id: 11, time: '6:00 pm' },
-  { id: 12, time: '7:00 pm' },
+  { id: 1, time: '10:00 am' },
+  { id: 2, time: '11:00 am' },
+  { id: 3, time: '12:00 am' },
+  { id: 4, time: '1:00 pm' },
+  { id: 5, time: '2:00 pm' },
+  { id: 6, time: '3:00 pm' },
+  { id: 7, time: '4:00 pm' },
+  { id: 8, time: '5:00 pm' },
+  { id: 9, time: '6:00 pm' },
+  { id: 10, time: '6:30 pm' },
+  { id: 11, time: '7:00 pm' },
+  { id: 12, time: '7:30 pm' },
 ]
 
 interface TimeSelectorProps {
@@ -26,7 +26,7 @@ interface TimeSelectorProps {
 }
 
 export default function TimeSelector({ onTimeSelect }: TimeSelectorProps) {
-  const [selectedTime, setSelectedTime] = useState<number | null>(1)
+  const [selectedTime, setSelectedTime] = useState<number | null>(null)
 
   const handleTimeSelection = (timeSlot: TimeSlot) => {
     const newSelected = timeSlot.id === selectedTime ? null : timeSlot.id

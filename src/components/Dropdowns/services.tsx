@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 50,
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 370,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -124,6 +124,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    left: 5
   },
   dropdownBtnOpen: {
     borderColor: '#000',

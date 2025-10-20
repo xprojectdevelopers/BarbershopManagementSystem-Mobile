@@ -2,10 +2,10 @@ import {
   StyleSheet,
   Text,
   View,
-  KeyboardAvoidingView,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator } from 'react-native'
+  ActivityIndicator,
+  Linking } from 'react-native'
 import React, {useState}from 'react'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -75,9 +75,9 @@ export default function EmailLogin() {
         if(__DEV__) {
           console.log('Attempting login with:', {email: email.trim()})
         }
-        const result = await signIn(email, password)
+        const result = await signIn(email.trim(), password.trim())
 
-        if(result.data) {
+        if(!result.error) {
           setLoginStatus('success')
           setTimeout(() => {
             navigation.reset({
@@ -166,7 +166,7 @@ export default function EmailLogin() {
             <Text style={styles.errorText}>{networkError}</Text>
           </View>
         ) : null}
-          <TouchableOpacity disabled={authLoading || loginStatus === 'loading'}>
+          <TouchableOpacity disabled={authLoading || loginStatus === 'loading'} onPress={() => Linking.openURL('https://molavestreetbarbers-forgotpassword.netlify.app/')}>
             <Text style={styles.forgotPasswordText}>Forgot password?</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLogin}

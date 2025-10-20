@@ -1,7 +1,4 @@
-- [x] Add auto-slide animation to socialMedia.tsx with 5-second duration
-  - [x] Import useState and useEffect
-  - [x] Add currentIndex state
-  - [x] Add useEffect with setInterval for auto-scroll
-  - [x] Make animation smoother
-  - [x] Add stretch active indicator for dots
-  - [ ] Test the animation
+- Update emailSignup.tsx for new flow, password 8 chars, remove +63
+- Update userPassword.tsx to displayName
+- Update contactNum.tsx remove +63 UI
+- Test signup flow

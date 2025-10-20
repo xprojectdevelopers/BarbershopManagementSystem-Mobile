@@ -4,18 +4,19 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RootStackParamList } from '../../../types/navigations'
 import React, { useState } from 'react'
 import { supabase } from '../../../lib/supabase/client';
+import { registerForPushNotificationsAsync } from '../../../utils/registerForPushNotificationAsync';
 
 //Separated Screens
-import DisplayName from './options/displayName'
+import EmailScreen from './options/emailScreen'
 import UserPassword from './options/userPassword'
 import ContactNumber from './options/contactNum'
 
-type Screen = 'DisplayName' | 'UserPassword' | 'ContactNumber'
+type Screen = 'EmailScreen' | 'UserPassword' | 'ContactNumber'
 
 export default function EmailSignup() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [currentScreen, setCurrentScreen] = React.useState<Screen>('DisplayName');
+  const [currentScreen, setCurrentScreen] = React.useState<Screen>('EmailScreen');
   const [email, setEmail] = useState('');
   const [display_name, setDisplayName] = useState('');
 
@@ -28,8 +29,8 @@ export default function EmailSignup() {
   const [passwordError, setPasswordError] = useState('');
 
   const goBack = () => {
-    if (currentScreen === 'DisplayName') navigation.navigate('SignUpOptions')
-    else if (currentScreen === 'UserPassword') setCurrentScreen('DisplayName')
+    if (currentScreen === 'EmailScreen') navigation.navigate('SignUpOptions')
+    else if (currentScreen === 'UserPassword') setCurrentScreen('EmailScreen')
     else if (currentScreen === 'ContactNumber') setCurrentScreen('UserPassword')
     else navigation.navigate('SignUpOptions')
   }
@@ -37,7 +38,16 @@ export default function EmailSignup() {
 
 
   const handleNext = async () => {
-    if (currentScreen === 'DisplayName') {
+    if (currentScreen === 'EmailScreen') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setEmailError('Please enter a valid email address');
+        return;
+      }
+      setEmailError('');
+      setCurrentScreen('UserPassword');
+
+    } else if (currentScreen === 'UserPassword') {
       if (!display_name.trim()) {
         Alert.alert('Error', 'Please enter your display name');
         return;
@@ -46,18 +56,9 @@ export default function EmailSignup() {
         Alert.alert('Error', 'Display name must be at least 2 characters');
         return;
       }
-      setCurrentScreen('UserPassword');
 
-    } else if (currentScreen === 'UserPassword') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setEmailError('Please enter a valid email address');
-        return;
-      }
-      setEmailError('');
-
-      if (!password || password.length < 6) {
-        setPasswordError('Password must be at least 6 characters');
+      if (!password || password.length < 8) {
+        setPasswordError('Password must be at least 8 characters');
         return;
       }
       setPasswordError('');
@@ -71,20 +72,16 @@ export default function EmailSignup() {
       return;
     }
 
-    // Validate phone number format: must be 10 digits (excluding +63)
+    // Validate phone number format: must be 10 digits
     const phoneNumberDigits = contact_number.replace(/\D/g, ''); // Remove non-digit chars
     if (phoneNumberDigits.length !== 10) {
-      Alert.alert('Error', 'Phone number must be 10 digits long (excluding country code)');
+      Alert.alert('Error', 'Phone number must be 10 digits long');
       return;
     }
 
     setLoading(true);
 
-    // Ensure contact number includes +63 prefix
     let formattedContactNumber = contact_number.trim();
-    if (!formattedContactNumber.startsWith('+63')) {
-      formattedContactNumber = '+63' + formattedContactNumber;
-    }
 
     try {
       // Create user with Supabase Auth
@@ -105,7 +102,7 @@ export default function EmailSignup() {
         if (error.message?.includes('already registered')) {
           Alert.alert('Error', 'This email is already registered. Please try logging in.');
         } else if (error.message?.includes('password')) {
-          Alert.alert('Error', 'Password must be at least 6 characters');
+          Alert.alert('Error', 'Password must be at least 8 characters');
         } else {
           Alert.alert('Registration Error', error.message || 'Registration failed. Please try again.');
         }
@@ -122,6 +119,16 @@ export default function EmailSignup() {
         return;
       }
 
+      // Register for push notifications and get token
+      let pushToken = null;
+      try {
+        pushToken = await registerForPushNotificationsAsync();
+        console.log('Push token obtained during signup:', pushToken);
+      } catch (tokenError) {
+        console.warn('Failed to get push token during signup:', tokenError);
+        // Don't block signup on push token failure
+      }
+
       // Insert user profile into customer_profiles
       const { error: profileError } = await supabase
         .from('customer_profiles')
@@ -130,7 +137,8 @@ export default function EmailSignup() {
             id: data.user.id,
             email: email.trim(),
             display_name: display_name.trim(),
-            contact_number: formattedContactNumber
+            contact_number: formattedContactNumber,
+            push_token: pushToken
           }
         ]);
 
@@ -178,20 +186,21 @@ export default function EmailSignup() {
   };
 
   const screens = {
-    DisplayName: (
-      <DisplayName
-        displayName={display_name}
-        setDisplayName={setDisplayName}
+    EmailScreen: (
+      <EmailScreen
+        email={email}
+        setEmail={setEmail}
         handleNext={handleNext}
         goBack={goBack}
+        setCurrentScreen={setCurrentScreen}
         loading={loading}
-        error=""
+        error={emailError}
       />
     ),
     UserPassword: (
       <UserPassword
-        email={email}
-        setEmail={setEmail}
+        displayName={display_name}
+        setDisplayName={setDisplayName}
         password={password}
         setPassword={setPassword}
         showPassword={showPassword}

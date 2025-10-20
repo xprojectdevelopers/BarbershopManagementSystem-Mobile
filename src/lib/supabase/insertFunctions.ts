@@ -15,6 +15,7 @@ interface InsertData {
   status?: string | null
   receipt_code?: string
   payment_method?: string | null
+  push_token?: string | null
 }
 
 const generateReceiptCode = async () => {
@@ -45,6 +46,10 @@ export async function insertDropdownSelection(data: InsertData) {
 
     const receiptCode = await generateReceiptCode();
 
+    // Get push token from customer_profiles
+    const profileResult = await getProfileById(user.id);
+    const pushToken = profileResult.success ? profileResult.data?.push_token : null;
+
     const { data: insertedData, error } = await supabase
       .from('appointment_sched')
       .insert([
@@ -60,11 +65,13 @@ export async function insertDropdownSelection(data: InsertData) {
           subtotal: data.subtotal ?? null,
           appointment_fee: data.appointment_fee ?? null,
           total: data.total ?? null,
-          status: data.status ?? 'pending',
+          status: data.status ?? 'On Going',
           receipt_code: receiptCode,
           payment_method: data.payment_method ?? null,
+          push_token: pushToken,
         },
       ])
+      .select('id')
 
     if (error) {
       console.error('Error inserting dropdown selection:', error)
@@ -74,20 +81,19 @@ export async function insertDropdownSelection(data: InsertData) {
       return { success: false, error }
     }
 
-    // Send push notification
-    const profileResult = await getProfileById(user.id);
-    if (profileResult.success && profileResult.data?.push_token) {
+    // Send push notification using Supabase function
+    if (pushToken) {
       try {
         await supabase.functions.invoke('sendNotification', {
           body: {
-            expoPushToken: profileResult.data.push_token,
+            expoPushToken: pushToken,
             title: 'Appointment Booked',
-            body: 'Your appointment has been successfully booked.',
+            message: 'Your appointment has been successfully booked.',
+            data: { type: 'appointment_booked', appointment_id: insertedData?.[0]?.id },
           },
         });
       } catch (notificationError) {
         console.error('Failed to send push notification:', notificationError);
-        // Continue - appointment was successfully created
       }
     }
     return { success: true, data: insertedData }
@@ -97,5 +103,46 @@ export async function insertDropdownSelection(data: InsertData) {
       err.message = 'Auth session cleared';
     }
     return { success: false, error: err }
+  }
+}
+
+// Insert notification
+export async function insertNotification(header: string, description: string, status: 'upcoming' | 'approved' | 'declined' = 'upcoming', type: 'appointment' | 'general' | 'system' = 'general') {
+  try {
+    // Get the current authenticated user
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.error('No authenticated user found');
+      return { success: false, error: 'No authenticated user' };
+    }
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([
+        {
+          user_id: user.id,
+          header,
+          description,
+          status,
+          type,
+        },
+      ]);
+
+    if (error) {
+      console.error('Error inserting notification:', error);
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error inserting notification:', err);
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
+    return { success: false, error: err };
   }
 }

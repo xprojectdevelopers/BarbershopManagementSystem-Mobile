@@ -2,29 +2,27 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-nati
 import React, { useState } from 'react'
 
 // Define the type for dropdown items
-interface BarberItem {
+interface NotificationTypeItem {
   id: number;
   label: string;
   value: string;
 }
 
-interface BarberNameProps {
-  onSelect?: (item: BarberItem) => void;
+interface NotificationTypeProps {
+  onSelect?: (item: NotificationTypeItem) => void;
 }
 
-export default function BarberName({ onSelect }: BarberNameProps) {
+export default function NotificationType({ onSelect }: NotificationTypeProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [selectedItem, setSelectedItem] = useState<BarberItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<NotificationTypeItem | null>(null);
 
-  const dropDownItems: BarberItem[] = [
-    { id: 1, label: 'Barber - John Doe', value: 'john_doe' },
-    { id: 2, label: 'Barber - Jane Doe', value: 'jane_doe' },
-    { id: 3, label: 'Barber - Janet Doe', value: 'janet_doe' },
-    { id: 4, label: 'Barber - Jack Doe', value: 'jack_doe' },
-    { id: 5, label: 'Barber - Jim Doe', value: 'jim_doe' }
+  const dropDownItems: NotificationTypeItem[] = [
+    { id: 1, label: 'General', value: 'general' },
+    { id: 2, label: 'Appointment', value: 'appointment' },
+    { id: 3, label: 'System', value: 'system' }
   ]
 
-  const handleSelect = (item: BarberItem): void => {
+  const handleSelect = (item: NotificationTypeItem): void => {
     setSelectedItem(item)
     setIsOpen(false)
     if (onSelect) {
@@ -39,7 +37,7 @@ export default function BarberName({ onSelect }: BarberNameProps) {
         onPress={() => setIsOpen(!isOpen)}
       >
         <Text style={[styles.buttonText, !selectedItem && styles.placeholderText]}>
-          {selectedItem ? selectedItem.label : 'Select Barber'}
+          {selectedItem ? selectedItem.label : 'Select Type'}
         </Text>
         <Text style={styles.arrow}>
           {isOpen ? '▲' : '▼'}
@@ -49,7 +47,7 @@ export default function BarberName({ onSelect }: BarberNameProps) {
       {isOpen && (
         <View style={styles.dropdownContainer}>
           <ScrollView showsVerticalScrollIndicator={true} style={styles.scrollView} nestedScrollEnabled={true}>
-            {dropDownItems.map((item: BarberItem) => (
+            {dropDownItems.map((item: NotificationTypeItem) => (
               <TouchableOpacity
                 key={item.id}
                 style={[
@@ -94,7 +92,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     height: 50,
-    width: 370,
+    width: 380,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -128,8 +126,9 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     backgroundColor: '#fff',
     borderWidth: 1,
+
     borderTopWidth: 0,
-    width: 370,
+    width: 380,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     height: 200,

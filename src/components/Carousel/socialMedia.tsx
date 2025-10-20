@@ -17,27 +17,37 @@ const { width } = Dimensions.get('window');
 const socialMediaData = [
   {
     id: '1',
+    title: 'Social Media',
     name: 'Facebook',
     image: require('../../../assets/img/Social Media/img1.jpg'),
     link: 'https://www.facebook.com/MolaveSB'
   },
   {
     id: '2',
+    title: 'Social Media',
     name: 'Instagram',
     image: require('../../../assets/img/Social Media/img2.jpg'),
     link: 'https://www.instagram.com/molavestreetsbarbers/'
   },
   {
     id: '3',
+    title: 'Social Media',
     name: 'TikTok',
     image: require('../../../assets/img/Social Media/img3.jpg'),
     link: 'https://www.tiktok.com/@molavestreetbarbers'
-  }
+  },
+  {
+    id: '4',
+    title: 'Google Form',
+    name: 'Tell us what you think',
+    image: require('../../../assets/img/Social Media/img4.png'),
+    link: 'https://docs.google.com/forms/d/e/1FAIpQLSfZe_Gh7zizByHCArr5UxzM76bnr6508XSvr8epvkaRnHZuTQ/viewform?usp=header'
+  },
 ];
 
 const SocialMediaCarousel = () => {
   const scrollX = useRef(new Animated.Value(0)).current;
-  const flatListRef = useRef<FlatList<{ id: string; name: string; image: any; link: string; }>>(null);
+  const flatListRef = useRef<FlatList<{ id: string; title: string; name: string; image: any; link: string; }>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const onMomentumScrollEnd = (event: any) => {
@@ -62,11 +72,12 @@ const handlePress = (url: string) => {
     Linking.openURL(url);
   };
 
-const renderItem = ({ item }: { item: { id: string; name: string; image: any; link: string; } }) => (
+const renderItem = ({ item }: { item: { id: string; title: string, name: string; image: any; link: string; } }) => (
     <View style={styles.slide}>
       <Image source={item.image} style={styles.image} />
+      <View style={styles.imageOverlay} />
       <View style={styles.textContainer}>
-        <Text style={styles.label}>Social Media</Text>
+        <Text style={styles.label}>{item.title}</Text>
         <Text style={styles.name}>{item.name}</Text>
         <TouchableOpacity onPress={() => handlePress(item.link)} style={styles.icon}>
           <AntDesign name="right-circle" size={40} color="white" />
@@ -122,7 +133,10 @@ const styles = StyleSheet.create({
   image: {
     width: width,
     height: 450,
-    filter: 'brightness(50%)',
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   textContainer: {
     position: 'absolute',

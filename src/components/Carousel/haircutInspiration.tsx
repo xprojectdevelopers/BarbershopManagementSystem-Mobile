@@ -17,6 +17,8 @@ import { supabase } from '../../lib/supabase/client';
 interface Album {
   id: number;
   image_url: string;
+  title_caption: string;
+  desc_caption: string;
 }
 
 const { width } = Dimensions.get('window');
@@ -80,8 +82,8 @@ const HaircutInspiration: React.FC = () => {
       setError(null);
 
       const { data: albumsData, error: fetchError } = await supabase
-        .from('album')
-        .select('id, image_url');
+        .from('album_mobile')
+        .select('id, image_url, title_caption, desc_caption');
 
       if (fetchError) throw fetchError;
       if (!albumsData) return;
@@ -103,8 +105,8 @@ const HaircutInspiration: React.FC = () => {
 
   const allImages = albums.map((album, index) => ({
     url: album.image_url,
-    title: index === 0 ? 'Round Shape' : index === 1 ? 'Square Shape' : 'Haircut Inspiration',
-    subtitle: index === 0 ? 'Clean Cut Look' : index === 1 ? 'Trendy Taper Style' : 'Inspiration',
+    title: album.title_caption,
+    subtitle: album.desc_caption,
   }));
 
   if (loading) {

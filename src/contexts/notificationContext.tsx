@@ -1,104 +1,72 @@
-import { registerForPushNotificationsAsync } from "../utils/registerForPushNotificationAsync";
-import { EventSubscription } from 'expo-modules-core';
-import * as Notifications from "expo-notifications";
-import React, {
-    createContext,
-    ReactNode,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
-} from "react";
+import React, { createContext, useContext, useEffect, ReactNode } from "react";
+import { NotificationService } from "../services/notificationService";
 import { supabase } from "../lib/supabase/client";
-import { updateProfile } from "../lib/supabase/profileFunctions";
-import { PostgrestError } from "@supabase/supabase-js";
 
 interface NotificationContextType {
   expoPushToken: string | null;
-  notification: Notifications.Notification | null;
-  error: Error | null;
+  refreshPushToken: () => Promise<void>;
+  sendNotification: (title: string, body: string, data?: Record<string, any>) => Promise<{ success: boolean; error?: any }>;
+  sendLocalNotification: (title: string, body: string, data?: Record<string, any>) => Promise<{ success: boolean; error?: any }>;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(
-  undefined
-);
+const NotificationContext = createContext<NotificationContextType>({ 
+  expoPushToken: null, 
+  refreshPushToken: () => Promise.resolve(),
+  sendNotification: () => Promise.resolve({ success: false }),
+  sendLocalNotification: () => Promise.resolve({ success: false })
+});
 
-export const useNotification = () => {
-  const context = useContext(NotificationContext);
-  if (context === undefined) {
-    throw new Error(
-      "useNotification must be used within a NotificationProvider"
-    );
-  }
-  return context;
-};
+export const useNotification = () => useContext(NotificationContext);
 
-interface NotificationProviderProps {
-  children: ReactNode;
-}
+export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [expoPushToken, setExpoPushToken] = React.useState<string | null>(null);
 
-export const NotificationProvider: React.FC<NotificationProviderProps> = ({
-  children,
-}) => {
-  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
-  const [notification, setNotification] = useState<Notifications.Notification | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+  const initializeNotifications = async () => {
+    try {
+      await NotificationService.initialize();
+      // Get token from the service (it will be saved automatically)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('customer_profiles')
+          .select('push_token')
+          .eq('id', user.id)
+          .single();
+        setExpoPushToken(profile?.push_token || null);
+      }
+    } catch (error) {
+      console.error('Error initializing notifications:', error);
+    }
+  };
 
-  const notificationListener = useRef<EventSubscription | null>(null);
-  const responseListener = useRef<EventSubscription | null>(null);
+  const refreshPushToken = async () => {
+    await initializeNotifications();
+  };
+
+  const sendNotification = async (title: string, body: string, data?: Record<string, any>) => {
+    return await NotificationService.sendPushNotification(title, body, data);
+  };
+
+  const sendLocalNotification = async (title: string, body: string, data?: Record<string, any>) => {
+    return await NotificationService.sendLocalNotification(title, body, data);
+  };
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then(
-      async (token) => {
-        setExpoPushToken(token);
-        if (token) {
-          const { data, error: authError } = await supabase.auth.getUser();
-          if (authError) {
-            console.error('Auth error:', authError);
-            setError(new Error('Failed to get user'));
-            return;
-          }
-          if (data.user) {
-            const { error: profileError } = await updateProfile(data.user.id, { push_token: token });
-            if (profileError) {
-              console.error('Error updating push token:', profileError);
-              setError(new Error((profileError as PostgrestError).message || "Failed to update push token"));
-            }
-          }
-        }
-      },
-      (error) => setError(error)
-    );
-
-    notificationListener.current =
-      Notifications.addNotificationReceivedListener((notification) => {
-        console.log("🔔 Notification Received: ", notification);
-        setNotification(notification);
-      });
-
-    responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log(
-          "🔔 Notification Response: ",
-          JSON.stringify(response.notification.request.content, null, 2)
-        );
-        // Handle the notification response here
-      });
-
+    initializeNotifications();
+    
+    // Cleanup on unmount
     return () => {
-      if (notificationListener.current) {
-        notificationListener.current.remove();
-      }
-      if (responseListener.current) {
-        responseListener.current.remove();
-      }
+      NotificationService.cleanup();
     };
   }, []);
 
   return (
-    <NotificationContext.Provider
-      value={{ expoPushToken, notification, error }}
-    >
+    <NotificationContext.Provider value={{ 
+      expoPushToken, 
+      refreshPushToken, 
+      sendNotification, 
+      sendLocalNotification 
+    }}>
       {children}
     </NotificationContext.Provider>
   );

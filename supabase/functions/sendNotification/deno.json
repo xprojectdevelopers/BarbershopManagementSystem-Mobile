@@ -1,3 +1,9 @@
 {
-  "imports": {}
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.75.0",
+    "expo-server-sdk": "npm:expo-server-sdk@4.0.0"
+  },
+  "tasks": {
+    "start": "deno run --allow-net --allow-env --allow-read sendNotification/index.ts"
+  }
 }

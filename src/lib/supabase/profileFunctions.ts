@@ -42,6 +42,51 @@ export async function getProfileById(id: string) {
   }
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  header: string;
+  description: string;
+  status: 'upcoming' | 'approved' | 'declined';
+  type: 'appointment' | 'general' | 'system';
+  created_at: string;
+}
+
+// Fetch notifications for the current user
+export async function fetchNotifications() {
+  try {
+    // Get the current authenticated user
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.error('No authenticated user found');
+      return { success: false, error: 'No authenticated user' };
+    }
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching notifications:', error);
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error fetching notifications:', err);
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
+    return { success: false, error: err };
+  }
+}
+
 // Get profile by username
 export async function getProfileByUsername(username: string): Promise<{ success: boolean; data?: CustomerProfile; error?: any }> {
   try {
@@ -173,5 +218,7 @@ export async function deleteProfile(id: string) {
     return { success: false, error: err };
   }
 }
+
+
 
 

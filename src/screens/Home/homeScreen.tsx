@@ -100,24 +100,33 @@ export default function HomeScreen() {
               style={styles.StreetCutImage2}
             />
           </TouchableOpacity>
-            <Text style={styles.StreetCutTitle2}>See More</Text>
-            <Text style={styles.StreetCutText2}>Discover Our Unique Story</Text>
+            <Text style={styles.StreetCutTitle2}>Learn More</Text>
+            <Text style={styles.StreetCutText2}>Hair Contents for You</Text>
         </View>
          <View style={styles.StreetCutContext3}>
           <TouchableOpacity>
             <Image 
               source={require('../../../assets/img/Get Started with StreetCut/img3.jpg')}
+              style={styles.StreetCutImage2}
+            />
+          </TouchableOpacity>
+            <Text style={styles.StreetCutTitle3}>See More</Text>
+            <Text style={styles.StreetCutText3}>Discover Our Unique Story</Text>
+        </View>
+         <View style={styles.StreetCutContext4}>
+          <TouchableOpacity>
+            <Image 
+              source={require('../../../assets/img/Get Started with StreetCut/img4.jpg')}
               style={styles.StreetCutImage3}
             />
           </TouchableOpacity>
-            <Text style={styles.StreetCutTitle3}>Click Now</Text>
-            <Text style={styles.StreetCutText3}>Know your Favorite Barber</Text>
+            <Text style={styles.StreetCutTitle4}>Click Now</Text>
+            <Text style={styles.StreetCutText4}>Know your Favorite Barber</Text>
         </View>
       </ScrollView>
     <Text style={styles.haircutInspirations}>Haircut Inspirations</Text>
     <HaircutInspiration />
     <SocialMedia />
-     
     </ScrollView>
   );
 
@@ -228,15 +237,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
+   StreetCutContext3: {
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  StreetCutContext4: {
+    alignItems: 'center',
+    marginRight: 10,
+  },
   StreetCutImage2: {
     width: 300,
     height: 350,
     borderRadius: 10,
     marginBottom: 10,
-  },
-  StreetCutContext3: {
-    alignItems: 'center',
-    marginRight: 10,
   },
   StreetCutImage3: {
     width: 300,
@@ -301,14 +314,24 @@ const styles = StyleSheet.create({
   StreetCutText2: {
     fontSize: 19,
     fontFamily: 'Satoshi-Bold',
-    right: 25,
+    right: 56,
   },
   StreetCutTitle3: {
     fontSize: 14,
     fontFamily: 'Satoshi-Bold',
-    right: 110,
+    right: 120,
   },
   StreetCutText3: {
+    fontSize: 19,
+    fontFamily: 'Satoshi-Bold',
+    right: 33,
+  },
+  StreetCutTitle4: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Bold',
+    right: 110,
+  },
+  StreetCutText4: {
     fontSize: 19,
     fontFamily: 'Satoshi-Bold',
     right: 25,

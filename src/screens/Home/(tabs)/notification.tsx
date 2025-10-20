@@ -267,38 +267,27 @@ export default function Notification() {
     if (success) {
       console.log('Appointment cancelled successfully');
 
-      // Send cancellation notification
+      // Send cancellation notification using context
       try {
-        const { data: notificationData, error: notificationError } = await supabase.functions.invoke('sendNotification', {
-          body: {
-            expoPushToken: expoPushToken, // Use the actual expoPushToken from context
-            title: 'Appointment Cancelled',
-            body: `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
-            data: { appointmentId: selectedAppointment.id, action: 'cancelled' },
-          },
-        });
-        if (notificationError) {
-          console.log('Notification failed, but appointment cancelled:', notificationError);
-        } else {
-          console.log('Cancellation notification sent:', notificationData);
-        }
+        const { sendNotification, sendLocalNotification } = useNotification();
+        
+        // Send push notification
+        await sendNotification(
+          'Appointment Cancelled',
+          `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
+          { appointmentId: selectedAppointment.id, action: 'cancelled' }
+        );
+        
+        // Also send local notification immediately
+        await sendLocalNotification(
+          'Appointment Cancelled',
+          `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
+          { appointmentId: selectedAppointment.id, action: 'cancelled' }
+        );
+        
+        console.log('Cancellation notifications sent successfully');
       } catch (notificationError) {
-        console.log('Error sending cancellation notification:', notificationError);
-      }
-
-      // Also trigger a local notification immediately
-      try {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: 'Appointment Cancelled',
-            body: `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
-            data: { appointmentId: selectedAppointment.id, action: 'cancelled' },
-          },
-          trigger: null, // immediate
-        });
-        console.log('Local notification scheduled');
-      } catch (localNotifError) {
-        console.log('Error scheduling local notification:', localNotifError);
+        console.log('Error sending cancellation notifications:', notificationError);
       }
 
       // Refetch appointments to update the list
