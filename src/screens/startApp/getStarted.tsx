@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigations';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Introduction from '../../components/Carousel/Introduction';
 
 type GetStartedNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -32,7 +33,8 @@ export default function GetStarted() {
 
       {/* Brightness Filter Overlay */}
       <View style={[StyleSheet.absoluteFill, styles.brightnessOverlay]} />
-
+      
+      <Introduction />
       {/* Buttons Overlay */}
       <View style={[styles.logRegButton, { bottom: 120 + insets.bottom }]}>
         <TouchableOpacity
