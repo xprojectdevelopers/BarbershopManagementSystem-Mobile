@@ -8,7 +8,6 @@ import {
   Platform,
   ScrollView,
   Pressable,
-  TextInput,
   Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -18,6 +17,8 @@ import { RootStackParamList } from '../../types/navigations';
 import { insertDropdownSelection } from '../../lib/supabase/insertFunctions';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProfileById } from '../../lib/supabase/profileFunctions';
+import { getEmployeeById } from '../../lib/supabase/employeeFunctions';
+import { getBookedTimesForDateAndBarber } from '../../lib/supabase/appointmentFunctions';
 import { NotificationService } from '../../services/notificationService';
 
 // Icons
@@ -30,6 +31,9 @@ import Services from '../../components/Dropdowns/services';
 import TimeSelector from '../../components/timeSelector';
 import AppointmentAlert from '../../components/Modals/appointmentAlert';
 import AppointmentPayment from '../../components/Modals/appointmentPayment';
+import ToolTip1 from '../../components/Modals/Tooltips/toolTip1';
+import ToolTip2 from '../../components/Modals/Tooltips/toolTip2';
+import ToolTip3 from '../../components/Modals/Tooltips/tooTip3';
 
 // Supabase
 
@@ -56,6 +60,7 @@ export default function AppointmentScreen() {
   const [selectedBarber, setSelectedBarber] = React.useState<BarberItem | null>(null);
   const [selectedService, setSelectedService] = React.useState<ServiceItem | null>(null);
   const [selectedTime, setSelectedTime] = React.useState<string | null>(null);
+  const [disabledTimes, setDisabledTimes] = React.useState<string[]>([]);
   const [customerName, setCustomerName] = React.useState('');
   const [contactNumber, setContactNumber] = React.useState('');
   const [subtotal, setSubtotal] = React.useState<number>(0);
@@ -63,18 +68,51 @@ export default function AppointmentScreen() {
   const [total, setTotal] = React.useState<number>(50);
   const [modalVisible, setModalVisible] = React.useState(false);
   const [alertVisible, setAlertVisible] = React.useState(true);
+  const [employeeName, setEmployeeName] = React.useState('');
+  const [employeeExpertise, setEmployeeExpertise] = React.useState('');
+  const [employeeRestDay, setEmployeeRestDay] = React.useState('');
+  const [employeePhoto, setEmployeePhoto] = React.useState('');
+  const [restDays, setRestDays] = React.useState<string[]>([]);
+  const [tooltipVisible, setTooltipVisible] = React.useState(false);
+  const [tooltip2Visible, setTooltip2Visible] = React.useState(false);
+  const [tooltip3Visible, setTooltip3Visible] = React.useState(false);
 
   React.useEffect(() => {
     if (user) {
       const fetchProfile = async () => {
         const profileResult = await getProfileById(user.id);
         if (profileResult.success && profileResult.data) {
-          setCustomerName(profileResult.data.name || '');
+          setCustomerName(profileResult.data.display_name || profileResult.data.username || '');
+          setContactNumber(profileResult.data.contact_number || '');
         }
       };
       fetchProfile();
     }
   }, [user]);
+
+  React.useEffect(() => {
+    if (selectedBarber) {
+      const fetchEmployee = async () => {
+        const employeeResult = await getEmployeeById(selectedBarber.value);
+        if (employeeResult.success && employeeResult.data) {
+          setEmployeeName(employeeResult.data.full_name);
+          setEmployeeExpertise(employeeResult.data.expertise);
+          setEmployeePhoto(employeeResult.data.photo);
+          const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+          const workDays = employeeResult.data.work_sched || [];
+          const restDays = allDays.filter(day => !workDays.includes(day));
+          setEmployeeRestDay(restDays.length > 0 ? restDays.join(', ') : 'No rest day');
+          setRestDays(restDays);
+        }
+      };
+      fetchEmployee();
+    }
+  }, [selectedBarber]);
+
+  React.useEffect(() => {
+    // No longer disabling times based on booked slots or rest days
+    setDisabledTimes([]);
+  }, [selectedBarber, date, restDays]);
 
   const toggleDatePicker = () => setShowPicker(!showPicker);
 
@@ -99,30 +137,10 @@ export default function AppointmentScreen() {
     setTotal(servicePrice + appointmentFee);
   };
 
-  const formatPhoneNumber = (input: string) => {
-    const digits = input.replace(/\D/g, '');
-    const limitedDigits = digits.slice(0, 10);
 
-    let formatted = ''
-    if(limitedDigits.length > 0) {
-      formatted = limitedDigits
-      if(limitedDigits.length > 3) {
-        formatted = `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
-        }
-      if (limitedDigits.length > 6) {
-          formatted = `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6)}`;
-        }
-      }
-      return formatted
-    }
-
-  const handlePhoneNumberChange = (text: string) => {
-    const formatted = formatPhoneNumber(text);
-    setContactNumber(formatted);
-  }
 
   const handleBookAppointment = async (paymentMethod: string) => {
-    if (!selectedBarber || !selectedService || !selectedTime || !customerName || !contactNumber || !date) {
+    if (!selectedBarber || !selectedService || !selectedTime || !date) {
       alert('Please fill in all fields');
       return;
     }
@@ -130,12 +148,10 @@ export default function AppointmentScreen() {
     console.log('Booking appointment...');
 
     const result = await insertDropdownSelection({
-      barber_id: selectedBarber.value,
-      service_id: selectedService.id.toString(),
+      barber_id: 'Barber - Zed',
+      service_id: selectedService.name,
       sched_date: date.toISOString().split('T')[0],
       sched_time: selectedTime,
-      customer_name: customerName,
-      contact_number: contactNumber.replace(/-/g, ''),
       subtotal,
       appointment_fee: appointmentFee,
       total,
@@ -145,33 +161,24 @@ export default function AppointmentScreen() {
 
     if (result.success) {
       console.log('Appointment successfully inserted!');
-      // Send server notification
-      await NotificationService.sendPushNotification(
-        'Molave Street Barbers',
-        'Your appointment has been successfully booked, SHEESHH.',
-        { type: 'appointment_booked' }
-      );
-      // Navigate to home screen immediately
-      navigation.navigate('Home', {});
+      setModalVisible(true);
     } else {
       alert('Failed to book appointment. Please try again.');
     }
   };
 
   const handlePayInPerson = async () => {
-    if (!selectedBarber || !selectedService || !selectedTime || !customerName || !contactNumber || !date) {
+    if (!selectedBarber || !selectedService || !selectedTime || !date) {
       Alert.alert('Validation Error', 'Please fill in all fields');
       return;
     }
 
     try {
       await insertDropdownSelection({
-      barber_id: selectedBarber.value,
-      service_id: selectedService.id.toString(),
+      barber_id: `Barber - ${selectedBarber.label}`,
+      service_id: selectedService.name,
       sched_date: date.toISOString().split('T')[0],
       sched_time: selectedTime,
-      customer_name: customerName,
-      contact_number: contactNumber.replace(/-/g, ''),
       subtotal,
       appointment_fee: appointmentFee,
       total,
@@ -199,11 +206,11 @@ export default function AppointmentScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Barber Info */}
         <View style={[styles.dayOff, styles.boxShadow]}>
-          <View style={styles.dayOffImage}/>
+           <Image source={require('../../../assets/img/DSC_0332.jpg')} style={styles.dayOffImage} />
           <View style={styles.dayOffContent}>
-            <Text style={styles.dayOffText}>Name: John Doe</Text>
+            <Text style={styles.dayOffText}>Name: Almer N. Jaquez</Text>
             <Text style={styles.dayOffText}>Expertise: Haircut</Text>
-            <Text style={styles.dayOffText}>Rest Day: Monday</Text>
+            <Text style={styles.dayOffText}>Rest Day: Sunday</Text>
           </View>
         </View>
 
@@ -236,40 +243,22 @@ export default function AppointmentScreen() {
         {/* Time Selector */}
         <View style={styles.time}>
           <Text style={styles.timeText}>Choose a time</Text>
-          <Pressable style={styles.timeInfoBtn}>
+          <Pressable style={styles.timeInfoBtn} onPress={() => setTooltip2Visible(true)}>
             <Ionicons name="information-circle-outline" size={18} color="black" />
           </Pressable>
         </View>
-        <TimeSelector onTimeSelect={setSelectedTime} />
+        <TimeSelector onTimeSelect={setSelectedTime} disabledTimes={disabledTimes} />
 
-        {/* Name Input */}
+        {/* Name Display */}
         <View style={styles.name}>
-          <Text style={styles.nameText}>Enter your Name</Text>
-          <TextInput
-            placeholder="Enter your name"
-            placeholderTextColor="#505050ff"
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.nameInput}
-            value={customerName}
-            onChangeText={setCustomerName}
-          />
+          <Text style={styles.nameText}>Your Name</Text>
+          <Text style={styles.displayText}>{customerName}</Text>
         </View>
 
-        {/* Contact Number Input */}
+        {/* Contact Number Display */}
         <View style={styles.contact}>
-          <Text style={styles.contactText}>Enter your Contact Number</Text>
-          <TextInput
-            placeholder='Enter your contact number'
-            placeholderTextColor={'#6b7280'}
-            keyboardType='phone-pad'
-            autoCapitalize='none'
-            autoCorrect={false}
-            style={styles.phoneInput}
-            value={contactNumber}
-            onChangeText={handlePhoneNumberChange}
-            returnKeyType='done'
-          />
+          <Text style={styles.contactText}>Your Contact Number</Text>
+          <Text style={styles.displayText}>{contactNumber}</Text>
         </View>
 
         {/* Totals */}
@@ -280,7 +269,12 @@ export default function AppointmentScreen() {
           </View>
 
           <View style={styles.AppointmentContainer}>
-            <Text style={styles.AppointmentText1}>Appointment Fee</Text>
+           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+             <Text style={styles.AppointmentText1}>Appointment Fee</Text>
+            <Pressable onPress={() => setTooltipVisible(true)}>
+              <Ionicons name="information-circle-outline" size={18} color="white" />
+            </Pressable>
+           </View>
             <Text style={styles.AppointmentText2}>₱{appointmentFee}</Text>
           </View>
 
@@ -292,10 +286,16 @@ export default function AppointmentScreen() {
 
         {/* Buttons */}
         <View style={styles.btnContainer}>
-          <TouchableOpacity style={styles.gcashBtn} onPress={() => handleBookAppointment('gcash')}>
+         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, right: 100 }}>
+           <Text style={{ fontFamily: 'Satoshi-Bold', fontSize: 16, marginBottom: 10 }}>Payment Method</Text>
+          <Pressable style={styles.paymentInfoBtn} onPress={() => setTooltip3Visible(true)}>
+            <Ionicons name="information-circle-outline" size={18} color="black" />
+          </Pressable>
+         </View>
+          <TouchableOpacity style={styles.gcashBtn} onPress={() => handleBookAppointment('GCash')}>
             <Text style={styles.gcashText}>Pay with Gcash</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.mayaBtn} onPress={() => handleBookAppointment('maya')}>
+          <TouchableOpacity style={styles.mayaBtn} onPress={() => handleBookAppointment('Maya')}>
             <Text style={styles.mayaText}>Pay with Maya</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.payInPersonBtn} onPress={handlePayInPerson}>
@@ -322,6 +322,18 @@ export default function AppointmentScreen() {
           );
           navigation.navigate('Home', { initialTab: 'Notification' });
         }}
+      />
+      <ToolTip1
+        visible={tooltipVisible}
+        onClose={() => setTooltipVisible(false)}
+      />
+      <ToolTip2
+        visible={tooltip2Visible}
+        onClose={() => setTooltip2Visible(false)}
+      />
+      <ToolTip3
+        visible={tooltip3Visible}
+        onClose={() => setTooltip3Visible(false)}
       />
     </View>
   );
@@ -353,8 +365,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    left: 20,
-    top: 10,
+    marginHorizontal: 20,
+    marginTop: 10,
     width: 350,
     height: 150,
     marginBottom: 20,
@@ -370,10 +382,9 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   dayOffImage: {
-     backgroundColor: 'black', 
-     width: 120, 
+     width: 120,
      height: 120,
-     marginLeft: 20 
+     marginLeft: 20,
     },
   dayOffContent: { 
     marginLeft: 20, 
@@ -455,19 +466,7 @@ const styles = StyleSheet.create({
     fontSize: 18, 
     color: '#333' 
   },
-  nameInput: {
-    borderWidth: 1, 
-    borderColor: '#b1b1b1ff', 
-    borderRadius: 8,
-    paddingHorizontal: 18, 
-    paddingVertical: 12,
-    fontSize: 16, 
-    fontFamily: 'Satoshi-Regular', 
-    backgroundColor: 'white', 
-    marginTop: 10, 
-    height: 50, 
-    width: 370,
-  },
+
   contact: { 
     paddingHorizontal: 10, 
     marginTop: 20 
@@ -477,20 +476,7 @@ const styles = StyleSheet.create({
     fontSize: 18, 
     color: '#333' 
   },
-  phoneInput: {
-    borderWidth: 1,
-    borderColor: '#b1b1b1ff',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    fontFamily: 'Satoshi-Medium',
-    fontSize: 16,
-    color: '#000000',
-    backgroundColor: '#ffffffff',
-    marginTop: 10,
-    height: 50,
-    width: 370,
-  },
+
   totalContainer: { 
     marginTop: 50, 
     marginHorizontal: 10, 
@@ -514,6 +500,10 @@ const styles = StyleSheet.create({
     fontSize: 18, 
     color: 'white', 
     fontFamily: 'Satoshi-Bold'
+  },
+  paymentInfoBtn: {
+    marginLeft: 5,
+    top: -3
   },
   AppointmentContainer: { 
     flexDirection: 'row', 
@@ -598,9 +588,11 @@ const styles = StyleSheet.create({
      textAlign: 'center',
      fontFamily: 'Satoshi-Bold'
   },
-  inputRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 40,
+
+  displayText: {
+    fontSize: 16,
+    fontFamily: 'Satoshi-Bold',
+    marginTop: 10,
+    color: '#000',
   },
 });

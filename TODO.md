@@ -1,5 +1,3 @@
-- Update emailSignup.tsx for new flow, password 8 chars, remove +63
-- Update userPassword.tsx to displayName
-- Update contactNum.tsx remove +63 UI
-- Test signup flow
-- Fix delivery update error in expo-delivery-webhook by adding receipt checking
+- [x] Edit src/screens/LogReg/loginOptionsScreen.tsx to make Google button permanently disabled
+- [x] Edit src/screens/LogReg/signUpOptionsScreen.tsx to make Google button disabled and add disabled style
+ea

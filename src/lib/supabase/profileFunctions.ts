@@ -11,6 +11,31 @@ export interface CustomerProfile {
   updated_at?: string | null;
 }
 
+// Change user password
+export async function changePassword(newPassword: string) {
+  try {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
+      console.error('Error changing password:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
+    console.error('Unexpected error changing password:', err);
+    return { success: false, error: err };
+  }
+}
+
 // Get profile by user ID
 export async function getProfileById(id: string) {
   try {
@@ -215,6 +240,45 @@ export async function deleteProfile(id: string) {
       err.message = 'Auth session cleared';
     }
     console.error('Unexpected error deleting profile:', err);
+    return { success: false, error: err };
+  }
+}
+
+// Send OTP to email
+export async function sendOTP(email: string) {
+  try {
+    console.log('Sending OTP to email:', email);
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: { to: email },
+    });
+
+    if (error) {
+      console.error('Error sending OTP:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error sending OTP:', err);
+    return { success: false, error: err };
+  }
+}
+
+// Verify OTP
+export async function verifyOTP(email: string, otp: string) {
+  try {
+    const { data, error } = await supabase.functions.invoke('generate-otp', {
+      body: { email, otp },
+    });
+
+    if (error) {
+      console.error('Error verifying OTP:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error verifying OTP:', err);
     return { success: false, error: err };
   }
 }

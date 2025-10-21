@@ -46,9 +46,16 @@ export async function insertDropdownSelection(data: InsertData) {
 
     const receiptCode = await generateReceiptCode();
 
-    // Get push token from customer_profiles
+    // Get profile data from customer_profiles
     const profileResult = await getProfileById(user.id);
-    const pushToken = profileResult.success ? profileResult.data?.push_token : null;
+    if (!profileResult.success) {
+      console.error('Failed to fetch customer profile');
+      return { success: false, error: 'Failed to fetch customer profile' };
+    }
+    const profile = profileResult.data;
+    const pushToken = profile?.push_token ?? null;
+    const customerName = profile?.display_name ?? profile?.username ?? null;
+    const contactNumber = profile?.contact_number ?? null;
 
     const { data: insertedData, error } = await supabase
       .from('appointment_sched')
@@ -59,8 +66,8 @@ export async function insertDropdownSelection(data: InsertData) {
           service_id: data.service_id ?? null,
           sched_date: data.sched_date ?? null,
           sched_time: data.sched_time ?? null,
-          customer_name: data.customer_name ?? null,
-          contact_number: data.contact_number ?? null,
+          customer_name: customerName,
+          contact_number: contactNumber,
           customer_badge: data.customer_badge ?? null,
           subtotal: data.subtotal ?? null,
           appointment_fee: data.appointment_fee ?? null,
@@ -96,6 +103,7 @@ export async function insertDropdownSelection(data: InsertData) {
         console.error('Failed to send push notification:', notificationError);
       }
     }
+
     return { success: true, data: insertedData }
   } catch (err) {
     console.error('Unexpected error inserting dropdown selection:', err)

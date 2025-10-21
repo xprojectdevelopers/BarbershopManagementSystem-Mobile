@@ -11,7 +11,5 @@ export type RootStackParamList = {
   Appointment: undefined;
   SplashScreen: undefined;
   About: undefined;
-  ChangePassword: undefined;
-  AccountInfo: undefined;
   HairContent: undefined;
 };

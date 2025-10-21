@@ -45,3 +45,24 @@ export async function updateAppointmentStatus(appointmentId: string, status: str
     return { success: false, error: err };
   }
 }
+
+export async function getBookedTimesForDateAndBarber(schedDate: string, barberId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('appointment_sched')
+      .select('sched_time')
+      .eq('sched_date', schedDate)
+      .eq('barber_id', barberId)
+      .neq('status', 'Cancelled'); // Exclude cancelled appointments
+
+    if (error) {
+      console.error('Error fetching booked times:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error('Unexpected error fetching booked times:', err);
+    return { success: false, error: err };
+  }
+}

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 interface TimeSlot {
   id: number
@@ -23,12 +23,18 @@ const timeSlots: TimeSlot[] = [
 
 interface TimeSelectorProps {
   onTimeSelect?: (time: string) => void;
+  disabledTimes?: string[];
 }
 
-export default function TimeSelector({ onTimeSelect }: TimeSelectorProps) {
+export default function TimeSelector({ onTimeSelect, disabledTimes = [] }: TimeSelectorProps) {
   const [selectedTime, setSelectedTime] = useState<number | null>(null)
 
   const handleTimeSelection = (timeSlot: TimeSlot) => {
+    // Don't allow selection if time is disabled
+    if (disabledTimes.includes(timeSlot.time)) {
+      return;
+    }
+
     const newSelected = timeSlot.id === selectedTime ? null : timeSlot.id
     setSelectedTime(newSelected)
     if (onTimeSelect && newSelected) {
@@ -37,6 +43,9 @@ export default function TimeSelector({ onTimeSelect }: TimeSelectorProps) {
   }
 
   const getButtonStyle = (timeSlot: TimeSlot) => {
+    if (disabledTimes.includes(timeSlot.time)) {
+      return styles.selectorDisabled
+    }
     if (selectedTime === timeSlot.id) {
       return styles.selectorActive
     }
@@ -44,6 +53,9 @@ export default function TimeSelector({ onTimeSelect }: TimeSelectorProps) {
   }
 
   const getTextStyle = (timeSlot: TimeSlot) => {
+    if (disabledTimes.includes(timeSlot.time)) {
+      return styles.selectorDisabledText
+    }
     if (selectedTime === timeSlot.id) {
       return styles.selectorActiveText
     }
@@ -58,6 +70,7 @@ export default function TimeSelector({ onTimeSelect }: TimeSelectorProps) {
             key={timeSlot.id}
             style={getButtonStyle(timeSlot)}
             onPress={() => handleTimeSelection(timeSlot)}
+            disabled={disabledTimes.includes(timeSlot.time)}
           >
             <Text style={getTextStyle(timeSlot)}>
               {timeSlot.time}
@@ -109,5 +122,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Satoshi-Bold',
     color: 'black'
+  },
+  selectorDisabled: {
+    width: 100,
+    height: 40,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  selectorDisabledText: {
+    fontSize: 16,
+    fontFamily: 'Satoshi-Bold',
+    color: '#999'
   }
 })

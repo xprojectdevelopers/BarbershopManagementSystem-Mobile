@@ -75,10 +75,10 @@ export default function LoginOptions() {
           </TouchableOpacity>
 
           {/* Updated Google Button with functionality */}
-          <TouchableOpacity 
-            style={[styles.googleBtn, googleLoading && styles.buttonDisabled]}
+          <TouchableOpacity
+            style={[styles.googleBtn, (googleLoading || true) && styles.buttonDisabled]}
             onPress={handleGoogleSignIn}
-            disabled={googleLoading}
+            disabled={googleLoading || true}
           >
             {googleLoading ? (
               <ActivityIndicator size="small" color="black" style={{right: 50}} />

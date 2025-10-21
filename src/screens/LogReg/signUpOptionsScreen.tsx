@@ -27,7 +27,7 @@ export default function SignUpOptions() {
             <MaterialCommunityIcons name="email" size={24} color="white" style={{right: 58}} />
             <Text style={styles.emailText}>Sign up with Email</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.googleBtn}>
+          <TouchableOpacity style={[styles.googleBtn, styles.buttonDisabled]} disabled={true}>
             <Image source={require('../../../assets/icon/googleLogo.png')} style={{width: 24, height: 24, right: 50}} />
             <Text style={styles.googleText}>Sign up with Google</Text>
           </TouchableOpacity>
@@ -100,6 +100,9 @@ const styles = StyleSheet.create({
     color: 'black',
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   facebookBtn: {
     backgroundColor: 'white',

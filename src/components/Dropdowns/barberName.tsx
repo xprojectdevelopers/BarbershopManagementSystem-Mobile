@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { getAllEmployees } from '../../lib/supabase/employeeFunctions'
 
 interface BarberItem {
   id: number;
@@ -14,14 +15,24 @@ interface BarberNameProps {
 export default function BarberName({ onSelect }: BarberNameProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<BarberItem | null>(null);
+  const [dropDownItems, setDropDownItems] = useState<BarberItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const dropDownItems: BarberItem[] = [
-    { id: 1, label: 'Barber - John Doe', value: 'john_doe' },
-    { id: 2, label: 'Barber - Jane Doe', value: 'jane_doe' },
-    { id: 3, label: 'Barber - Janet Doe', value: 'janet_doe' },
-    { id: 4, label: 'Barber - Jack Doe', value: 'jack_doe' },
-    { id: 5, label: 'Barber - Jim Doe', value: 'jim_doe' }
-  ]
+  useEffect(() => {
+    const fetchBarbers = async () => {
+      const result = await getAllEmployees();
+      if (result.success && result.data) {
+        const barbers = result.data.map(employee => ({
+          id: parseInt(employee.id),
+          label: employee.full_name === 'Zer Almer' ? 'Barber - Zer' : 'Barber - Zer Almer',
+          value: employee.id
+        }));
+        setDropDownItems(barbers);
+      }
+      setLoading(false);
+    };
+    fetchBarbers();
+  }, []);
 
   const handleSelect = (item: BarberItem): void => {
     setSelectedItem(item)

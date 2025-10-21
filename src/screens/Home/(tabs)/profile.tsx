@@ -14,18 +14,22 @@ import { RootStackParamList } from '../../../types/navigations';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getProfileById, CustomerProfile } from '../../../lib/supabase/profileFunctions';
 import { useEffect } from 'react';
+import ChangePasswordModal from '../../../components/Modals/changePassword';
+import AccountInfoModal from '../../../components/Modals/accountInfo';
 
 //icons
 import { Ionicons, MaterialIcons, Feather, FontAwesome6 } from '@expo/vector-icons';
 
 type ProfileSettingsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'GetStarted' | 'About' | 'ChangePassword' | 'AccountInfo'
+  'GetStarted' | 'About'
 >;
 
 export default function ProfileSettingsScreen() {
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [isChangePasswordModalVisible, setIsChangePasswordModalVisible] = useState(false);
+  const [isAccountInfoModalVisible, setIsAccountInfoModalVisible] = useState(false);
 
   const navigation = useNavigation<ProfileSettingsScreenNavigationProp>();
   const { signOut, user } = useAuth();
@@ -155,9 +159,9 @@ export default function ProfileSettingsScreen() {
                 if (item.id === 1) {
                   navigation.navigate('About');
                 } else if (item.id === 2) {
-                  navigation.navigate('ChangePassword');
+                  setIsChangePasswordModalVisible(true);
                 } else if (item.id === 3) {
-                  navigation.navigate('AccountInfo');
+                  setIsAccountInfoModalVisible(true);
                 } else if (item.id === 4) {
                   handleLogout();
                 }
@@ -183,6 +187,19 @@ export default function ProfileSettingsScreen() {
 
 
       </ScrollView>
+
+      <ChangePasswordModal
+        visible={isChangePasswordModalVisible}
+        onClose={() => setIsChangePasswordModalVisible(false)}
+        onConfirm={() => {
+          console.log('Password change confirmed');
+        }}
+      />
+
+      <AccountInfoModal
+        visible={isAccountInfoModalVisible}
+        onClose={() => setIsAccountInfoModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
