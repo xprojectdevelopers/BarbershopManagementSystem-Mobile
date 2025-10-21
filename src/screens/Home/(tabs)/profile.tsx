@@ -5,7 +5,6 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Switch,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,8 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../types/navigations';
 import { useAuth } from '../../../contexts/AuthContext';
-import { deleteProfile, getProfileById, CustomerProfile } from '../../../lib/supabase/profileFunctions';
-import { Alert } from 'react-native';
+import { getProfileById, CustomerProfile } from '../../../lib/supabase/profileFunctions';
 import { useEffect } from 'react';
 
 //icons
@@ -22,14 +20,12 @@ import { Ionicons, MaterialIcons, Feather, FontAwesome6 } from '@expo/vector-ico
 
 type ProfileSettingsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'GetStarted'
+  'GetStarted' | 'About' | 'ChangePassword' | 'AccountInfo'
 >;
 
 export default function ProfileSettingsScreen() {
-  const [darkMode, setDarkMode] = useState(false);
-  const [profile, setProfile] = useState<CustomerProfile | null>(null);
 
-  const toggleDarkMode = () => setDarkMode(previousState => !previousState);
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
 
   const navigation = useNavigation<ProfileSettingsScreenNavigationProp>();
   const { signOut, user } = useAuth();
@@ -58,67 +54,34 @@ export default function ProfileSettingsScreen() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (user?.id) {
-              try {
-                const { success, error } = await deleteProfile(user.id);
-                if (success) {
-                  await signOut();
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'GetStarted' }],
-                  });
-                } else {
-                  Alert.alert('Error', (error as Error)?.message || 'Failed to delete account');
-                }
-              } catch (error) {
-                Alert.alert('Error', 'An unexpected error occurred');
-              }
-            }
-          },
-        },
-      ]
-    );
-  };
+
 
   const settingsItems = [
     {
       id: 1,
-      title: 'Dark Mode',
-      icon: 'moon' as const,
-      iconLibrary: 'Feather' as const,
-      hasSwitch: true,
-      switchValue: darkMode,
-      onSwitchToggle: toggleDarkMode,
+      title: 'About us',
+      icon: 'information-circle' as const,
+      iconLibrary: 'Ionicons' as const,
+      hasSwitch: false,
     },
     {
       id: 2,
-      title: 'Notifications',
-      icon: 'notifications' as const,
-      iconLibrary: 'Ionicons' as const,
-      hasSwitch: false,
-      status: 'On',
-    },
-    {
-      id: 4,
-      title: 'Security',
+      title: 'Change password',
       icon: 'lock-closed' as const,
       iconLibrary: 'Ionicons' as const,
       hasSwitch: false,
     },
     {
-      id: 5,
-      title: 'Account',
+      id: 3,
+      title: 'Account Information',
       icon: 'person' as const,
+      iconLibrary: 'Ionicons' as const,
+      hasSwitch: false,
+    },
+    {
+      id: 4,
+      title: 'Logout',
+      icon: 'log-out-outline' as const,
       iconLibrary: 'Ionicons' as const,
       hasSwitch: false,
     },
@@ -138,13 +101,18 @@ export default function ProfileSettingsScreen() {
   };
 
   const getIconColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#000'];
+    const colors = ['#000', '#000', '#000', '#ff4444'];
     return colors[index] || '#000';
   };
 
   const getIconBackground = (index: number) => {
     const backgrounds = ['#f0f0f0', '#f0f0f0', '#f0f0f0', '#f0f0f0'];
     return backgrounds[index] || '#f0f0f0';
+  };
+
+  const getTextColor = (index: number) => {
+    const colors = ['#000', '#000', '#000', '#ff4444'];
+    return colors[index] || '#000';
   };
 
   return (
@@ -166,12 +134,13 @@ export default function ProfileSettingsScreen() {
           <Text style={styles.profileName}>{profile?.display_name || 'User'}</Text>
           <View style={styles.locationContainer}>
             <Text style={styles.locationText}>{profile?.username || ''}</Text>
+            <Text style={styles.locationText}>{profile?.email || ''}</Text>
           </View>
 
-          <TouchableOpacity style={styles.upgradeButton} onPress={() => navigation.navigate('PushNotifScreen')}>
-            <Text style={styles.upgradeButtonText}>Test Notifications</Text>
+          <TouchableOpacity style={styles.upgradeButton}>
+            <Text style={styles.upgradeButtonText}>Change Photo</Text>
           </TouchableOpacity>
-        </View>
+        </View> 
 
         {/* Settings Section */}
         <View style={styles.settingsSection}>
@@ -182,29 +151,28 @@ export default function ProfileSettingsScreen() {
               key={item.id}
               style={styles.settingsItem}
               disabled={item.hasSwitch}
+              onPress={() => {
+                if (item.id === 1) {
+                  navigation.navigate('About');
+                } else if (item.id === 2) {
+                  navigation.navigate('ChangePassword');
+                } else if (item.id === 3) {
+                  navigation.navigate('AccountInfo');
+                } else if (item.id === 4) {
+                  handleLogout();
+                }
+              }}
             >
               <View style={styles.settingsItemLeft}>
                 <View style={[styles.iconContainer, { backgroundColor: getIconBackground(index) }]}>
                   {renderIcon(item.icon, item.iconLibrary, getIconColor(index))}
                 </View>
-                <Text style={styles.settingsItemText}>{item.title}</Text>
+                <Text style={[styles.settingsItemText, { color: getTextColor(index) }]}>{item.title}</Text>
               </View>
 
               <View style={styles.settingsItemRight}>
-                {item.hasSwitch ? (
-                  <Switch
-                    trackColor={{ false: '#E0E0E0', true: '#E91E63' }}
-                    thumbColor={item.switchValue ? '#fff' : '#f4f3f4'}
-                    ios_backgroundColor="#E0E0E0"
-                    onValueChange={item.onSwitchToggle}
-                    value={item.switchValue}
-                    style={styles.switch}
-                  />
-                ) : (
+                {index !== 3 && (
                   <View style={styles.rightContent}>
-                    {item.status && (
-                      <Text style={styles.statusText}>{item.status}</Text>
-                    )}
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                   </View>
                 )}
@@ -213,25 +181,7 @@ export default function ProfileSettingsScreen() {
           ))}
         </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <View style={styles.logoutContent}>
-            <View style={styles.logoutIconContainer}>
-              <Ionicons name="log-out-outline" size={24} color="#ff4444" />
-            </View>
-            <Text style={styles.logoutText}>Logout</Text>
-          </View>
-        </TouchableOpacity>
 
-        {/* Delete Account Button */}
-        <TouchableOpacity onPress={handleDeleteAccount} style={styles.deleteButton}>
-          <View style={styles.deleteContent}>
-            <View style={styles.deleteIconContainer}>
-              <Ionicons name="trash-outline" size={24} color="#ff4444" />
-            </View>
-            <Text style={styles.deleteText}>Delete Account</Text>
-          </View>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -259,6 +209,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     elevation: 2,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -288,6 +239,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
     marginBottom: 8,
+    fontFamily: 'Satoshi-Bold',
   },
   locationContainer: {
     flexDirection: 'row',
@@ -297,6 +249,7 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Satoshi-Bold',
   },
   upgradeButton: {
     backgroundColor: '#000',
@@ -380,81 +333,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginRight: 8,
-  },
-  switch: {
-    transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }],
-  },
-
-  logoutButton: {
-    backgroundColor: '#f8f8f8',
-    marginHorizontal: 20,
-    borderRadius: 24,
-    marginBottom: 40,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  logoutContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-  },
-  logoutIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-    backgroundColor: '#fff0f0',
-  },
-  logoutText: {
-    fontSize: 18,
-    color: '#ff4444',
-    fontWeight: '500',
-  },
-  deleteButton: {
-    backgroundColor: '#f8f8f8',
-    marginHorizontal: 20,
-    borderRadius: 24,
-    marginBottom: 40,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  deleteContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-  },
-  deleteIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-    backgroundColor: '#fff0f0',
-  },
-  deleteText: {
-    fontSize: 18,
-    color: '#ff4444',
-    fontWeight: '500',
   },
 });

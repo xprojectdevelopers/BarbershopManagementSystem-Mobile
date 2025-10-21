@@ -26,7 +26,7 @@ import SocialMedia from '../../components/Carousel/socialMedia';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'Appointment'
+  'Home'
 >;
 
 export default function HomeScreen() {
@@ -94,7 +94,7 @@ export default function HomeScreen() {
             <Text style={styles.StreetCutText1}>Your Chair is Waiting for You</Text>
         </View>
          <View style={styles.StreetCutContext2}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('HairContent')}>
             <Image 
               source={require('../../../assets/img/Get Started with StreetCut/img2.jpg')}
               style={styles.StreetCutImage2}
@@ -154,7 +154,7 @@ export default function HomeScreen() {
     switch (activeTab) {
       case 'Home':
         return renderHomeContent();
-      case 'Appointment':
+      case 'Notification':
         return renderNotificationContent();
       case 'Profile':
         return renderProfileContent();

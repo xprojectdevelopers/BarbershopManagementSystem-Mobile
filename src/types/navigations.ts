@@ -10,5 +10,8 @@ export type RootStackParamList = {
   ContactNumber: undefined;
   Appointment: undefined;
   SplashScreen: undefined;
-  PushNotifScreen: undefined;
+  About: undefined;
+  ChangePassword: undefined;
+  AccountInfo: undefined;
+  HairContent: undefined;
 };

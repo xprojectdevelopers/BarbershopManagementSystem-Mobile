@@ -20,7 +20,7 @@ export default function BottomTab({ activeTab, onTabPress }: BottomTabProps) {
       IconComponent: SimpleLineIcons
     },
     {
-      key: 'Appointment',
+      key: 'Notification',
       label: 'Notification',
       icon: 'bell-outline',
       IconComponent: MaterialCommunityIcons

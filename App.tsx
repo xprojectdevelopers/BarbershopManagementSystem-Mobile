@@ -19,7 +19,10 @@ import EmailLogin from "./src/screens/LogReg/Email/emailLogin";
 import EmailSignup from "./src/screens/LogReg/Email/emailSignup";
 import Appointment from "./src/screens/Appointment/appointmentScreen";
 import SplashScreen from "./src/screens/startApp/splashScreen";
-import PushNotifScreen from "./src/screens/pushNotifScreen";
+import About from './src/screens/profiles/about.tsx'
+import ChangePassword from './src/screens/profiles/changePassword.tsx'
+import AccountInfo from './src/screens/profiles/accountInfo.tsx'
+import HairContent from './src/screens/Home/hairContent.tsx'
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -89,7 +92,10 @@ export default function App() {
             <Stack.Screen name="EmailLogin" component={EmailLogin} />
             <Stack.Screen name="EmailSignup" component={EmailSignup} />
             <Stack.Screen name="Appointment" component={Appointment} />
-            <Stack.Screen name="PushNotifScreen" component={PushNotifScreen} />
+            <Stack.Screen name="About" component={About} />
+            <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="AccountInfo" component={AccountInfo} />
+            <Stack.Screen name="HairContent" component={HairContent} />
           </Stack.Navigator>
         </NavigationContainer>
       </NotificationProvider>
