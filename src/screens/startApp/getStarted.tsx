@@ -30,6 +30,9 @@ export default function GetStarted() {
         nativeControls={false}
       />
 
+      {/* Brightness Filter Overlay */}
+      <View style={[StyleSheet.absoluteFill, styles.brightnessOverlay]} />
+
       {/* Buttons Overlay */}
       <View style={[styles.logRegButton, { bottom: 120 + insets.bottom }]}>
         <TouchableOpacity
@@ -55,6 +58,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  brightnessOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   logRegButton: {
     position: 'absolute',

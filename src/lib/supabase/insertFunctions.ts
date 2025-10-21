@@ -107,7 +107,7 @@ export async function insertDropdownSelection(data: InsertData) {
 }
 
 // Insert notification
-export async function insertNotification(header: string, description: string, status: 'upcoming' | 'approved' | 'declined' = 'upcoming', type: 'appointment' | 'general' | 'system' = 'general') {
+export async function insertNotification(header: string, description: string, status: string = 'upcoming', type: string = 'general') {
   try {
     // Get the current authenticated user
     const { data: { user } } = await supabase.auth.getUser();

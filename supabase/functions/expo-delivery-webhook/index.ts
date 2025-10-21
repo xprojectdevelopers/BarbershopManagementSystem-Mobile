@@ -1,3 +1,4 @@
+import { Expo, ExpoPushMessage, ExpoPushSuccessTicket } from "expo-server-sdk";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -18,42 +19,111 @@ Deno.serve(async (req) => {
   try {
     const { token, title, body } = await req.json();
 
-    // 1️⃣ Send push notification via Expo
-    const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    if (!token || !title || !body) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing required fields: token, title, body" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    const expoAccessToken = Deno.env.get("EXPO_ACCESS_TOKEN");
+    if (!expoAccessToken) {
+      return new Response(JSON.stringify({ success: false, error: "Missing EXPO_ACCESS_TOKEN" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
+    const expo = new Expo({ accessToken: expoAccessToken, useFcmV1: true });
+
+    if (!Expo.isExpoPushToken(token)) {
+      return new Response(JSON.stringify({ success: false, error: `Invalid token: ${token}` }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    const messages: ExpoPushMessage[] = [
+      {
         to: token,
+        sound: "default",
         title,
         body,
         data: { title, body },
-      }),
-    });
+        priority: "high",
+      },
+    ];
 
-    const result = await expoResponse.json();
-    const ticket = result.data?.[0] || {};
-    const receiptId = ticket.id;
+    // Send push notification
+    const [ticket] = await expo.sendPushNotificationsAsync(messages);
+    console.log("📬 Ticket:", ticket);
 
-    // 2️⃣ Store send log with timestamp
-    const { error } = await supabase.from("notification_logs").insert({
+    const receiptId = (ticket as ExpoPushSuccessTicket).id;
+
+    // Store initial send log with timestamp
+    const { error: insertError } = await supabase.from("notification_logs").insert({
       expo_receipt_id: receiptId,
-      status: "queued",
+      status: ticket.status === "ok" ? "sent" : "error",
       device_token: token,
       message: body,
-      details: result,
-      sent_at: new Date().toISOString(), // 👈 Add timestamp
+      details: ticket,
+      sent_at: new Date().toISOString(),
     });
 
-    if (error) console.error("Error saving log:", error);
+    if (insertError) console.error("Error saving initial log:", insertError);
+
+    if (ticket.status === "error") {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: ticket.message,
+          details: ticket.details,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+
+    // Wait a few seconds for delivery receipt
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // Check delivery receipt
+    const receiptIdLog = [receiptId];
+    const receipts = await expo.getPushNotificationReceiptsAsync(receiptIdLog);
+    console.log("📬 Receipts:", receipts);
+
+    let deliveryStatus = "unknown";
+    if (receipts[receiptId]) {
+      const receipt = receipts[receiptId];
+      if (receipt.status === "ok") {
+        deliveryStatus = "delivered";
+      } else {
+        deliveryStatus = "failed";
+        console.error("Delivery failed:", receipt.message, receipt.details);
+      }
+    } else {
+      deliveryStatus = "pending"; // Receipt not yet available
+    }
+
+    // Update log with delivery status
+    const { error: updateError } = await supabase
+      .from("notification_logs")
+      .update({
+        delivery_status: deliveryStatus,
+        delivered_at: deliveryStatus === "delivered" ? new Date().toISOString() : null,
+      })
+      .eq("expo_receipt_id", receiptId);
+
+    if (updateError) console.error("Error updating delivery status:", updateError);
 
     return new Response(
       JSON.stringify({
         success: true,
         ticket,
         receiptId,
-        message: "Push notification queued successfully",
+        deliveryStatus,
+        message: "Push notification sent successfully",
         info: {
-          note: "Check server logs for delivery status",
+          note: "Delivery status updated in logs",
           expectedDelivery: "Within a few seconds",
         },
       }),

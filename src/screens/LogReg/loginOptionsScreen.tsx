@@ -62,7 +62,7 @@ export default function LoginOptions() {
       <TouchableOpacity onPress={() => navigation.navigate('GetStarted')} style={styles.backBtn}>
         <AntDesign name='arrow-left' size={34} color="black" />
       </TouchableOpacity>
-      <Text style={styles.Title}>Login to StreetCut</Text>
+      <Text style={styles.Title}>Login to MLV ST.</Text>
       <View style={styles.container}>
         <View style={styles.loginBtn}>
           <TouchableOpacity 
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     top: 120,
     textAlign: 'center',
     fontSize: 32,
-    fontFamily: 'Satoshi-Bold'
+    fontFamily: 'Satoshi-Medium'
   },
   loginBtn: {
     bottom: 170,
@@ -160,28 +160,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
   },
-  // Add disabled button style
   buttonDisabled: {
     opacity: 0.6,
   },
-  facebookBtn: {
-    backgroundColor: 'white',
-    padding: 10,
-    borderWidth: 1,
-    borderRadius: 30,
-    marginBottom: 10,
-    width: 350,
-    height: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  facebookText: {
-    fontSize: 16,
-    color: 'black',
-    textAlign: 'center',
-    fontFamily: 'Satoshi-Bold',
-  },
+
   signUpText: {
     fontSize: 16,
     color: 'gray',

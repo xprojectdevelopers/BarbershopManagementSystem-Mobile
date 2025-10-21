@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Text, ScrollView, TextInput, Alert } from "react-native";
 import * as Notifications from "expo-notifications";
 import { createClient } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase/client";
 import { useNotification } from "../contexts/notificationContext";
+import { insertNotification } from "../lib/supabase/insertFunctions";
 
 // Optional: fallback Supabase client if context is unavailable
 const localSupabase = createClient(
@@ -15,6 +16,10 @@ const PushNotifScreen: React.FC = () => {
   const { expoPushToken } = useNotification();
   const [logs, setLogs] = useState<string[]>([]);
   const [lastNotificationTime, setLastNotificationTime] = useState<Date | null>(null);
+  const [header, setHeader] = useState('');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState('');
+  const [type, setType] = useState('');
 
   const log = (message: string) => {
     console.log(message);
@@ -132,6 +137,32 @@ const PushNotifScreen: React.FC = () => {
     }
   };
 
+  // Insert notification into database
+  const handleInsertNotification = async () => {
+    if (!header || !description) {
+      Alert.alert('Validation Error', 'Please fill in header and description');
+      return;
+    }
+
+    try {
+      const result = await insertNotification(header, description, status, type);
+      if (result.success) {
+        log('✅ Notification inserted successfully');
+        Alert.alert('Success', 'Notification inserted successfully');
+        setHeader('');
+        setDescription('');
+        setStatus('');
+        setType('');
+      } else {
+        log(`❌ Error inserting notification: ${result.error}`);
+        Alert.alert('Error', 'Failed to insert notification');
+      }
+    } catch (error) {
+      log(`🔥 Exception while inserting notification: ${String(error)}`);
+      Alert.alert('Error', 'Failed to insert notification');
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>📱 Push Notification Tester</Text>
@@ -142,6 +173,37 @@ const PushNotifScreen: React.FC = () => {
 
       <TouchableOpacity style={styles.secondaryButton} onPress={savePushToken}>
         <Text style={styles.secondaryButtonText}>Save Push Token</Text>
+      </TouchableOpacity>
+
+      {/* Notification Input Fields */}
+      <Text style={styles.inputTitle}>Insert Notification</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Header"
+        value={header}
+        onChangeText={setHeader}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Description"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Status (upcoming, approved, declined)"
+        value={status}
+        onChangeText={setStatus}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Type (appointment, general, system)"
+        value={type}
+        onChangeText={setType}
+      />
+      <TouchableOpacity style={styles.insertButton} onPress={handleInsertNotification}>
+        <Text style={styles.insertButtonText}>Insert Notification</Text>
       </TouchableOpacity>
 
       {lastNotificationTime && (
@@ -190,6 +252,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   secondaryButtonText: { color: "#fff", fontSize: 14 },
+  inputTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+    fontSize: 16,
+  },
+  insertButton: {
+    backgroundColor: "#28a745",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  insertButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   deliveryTime: { textAlign: "center", color: "#333", marginBottom: 10 },
   logTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
   logBox: {

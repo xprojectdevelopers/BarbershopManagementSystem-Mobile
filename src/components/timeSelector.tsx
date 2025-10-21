@@ -9,7 +9,7 @@ interface TimeSlot {
 const timeSlots: TimeSlot[] = [
   { id: 1, time: '10:00 am' },
   { id: 2, time: '11:00 am' },
-  { id: 3, time: '12:00 am' },
+  { id: 3, time: '12:00 pm' },
   { id: 4, time: '1:00 pm' },
   { id: 5, time: '2:00 pm' },
   { id: 6, time: '3:00 pm' },

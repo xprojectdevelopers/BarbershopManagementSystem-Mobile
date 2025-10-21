@@ -16,9 +16,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigations';
 import { insertDropdownSelection } from '../../lib/supabase/insertFunctions';
-import * as Notifications from 'expo-notifications';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProfileById } from '../../lib/supabase/profileFunctions';
+import { NotificationService } from '../../services/notificationService';
 
 // Icons
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -135,7 +135,7 @@ export default function AppointmentScreen() {
       sched_date: date.toISOString().split('T')[0],
       sched_time: selectedTime,
       customer_name: customerName,
-      contact_number: `+63${contactNumber.replace(/-/g, '')}`,
+      contact_number: contactNumber.replace(/-/g, ''),
       subtotal,
       appointment_fee: appointmentFee,
       total,
@@ -145,16 +145,12 @@ export default function AppointmentScreen() {
 
     if (result.success) {
       console.log('Appointment successfully inserted!');
-      // Schedule local notification immediately
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Appointment Booked',
-          body: 'Your appointment has been successfully booked.',
-          sound: 'default',
-          priority: 'high',
-        },
-        trigger: null,
-      });
+      // Send server notification
+      await NotificationService.sendPushNotification(
+        'Molave Street Barbers',
+        'Your appointment has been successfully booked, SHEESHH.',
+        { type: 'appointment_booked' }
+      );
       // Navigate to home screen immediately
       navigation.navigate('Home', {});
     } else {
@@ -175,7 +171,7 @@ export default function AppointmentScreen() {
       sched_date: date.toISOString().split('T')[0],
       sched_time: selectedTime,
       customer_name: customerName,
-      contact_number: `+63${contactNumber.replace(/-/g, '')}`,
+      contact_number: contactNumber.replace(/-/g, ''),
       subtotal,
       appointment_fee: appointmentFee,
       total,
@@ -263,22 +259,17 @@ export default function AppointmentScreen() {
         {/* Contact Number Input */}
         <View style={styles.contact}>
           <Text style={styles.contactText}>Enter your Contact Number</Text>
-          <View style={styles.phoneInputContainer}>
-            <View style={styles.countryCodeContainer}>
-              <Text style={styles.countryCode}>+63</Text>
-            </View>
-            <TextInput
-              placeholder='XXX-XXX-XXXX'
-              placeholderTextColor={'#6b7280'}
-              keyboardType='phone-pad'
-              autoCapitalize='none'
-              autoCorrect={false}
-              style={styles.phoneInput}
-              value={contactNumber}
-              onChangeText={handlePhoneNumberChange}
-              returnKeyType='done'
-            />
-          </View>
+          <TextInput
+            placeholder='Enter your contact number'
+            placeholderTextColor={'#6b7280'}
+            keyboardType='phone-pad'
+            autoCapitalize='none'
+            autoCorrect={false}
+            style={styles.phoneInput}
+            value={contactNumber}
+            onChangeText={handlePhoneNumberChange}
+            returnKeyType='done'
+          />
         </View>
 
         {/* Totals */}
@@ -324,15 +315,11 @@ export default function AppointmentScreen() {
         onClose={() => setModalVisible(false)}
         onConfirm={async () => {
           setModalVisible(false);
-           await Notifications.scheduleNotificationAsync({
-            content: {
-              title: 'Appointment Booked',
-              body: 'Your appointment has been successfully booked.',
-              sound: 'default',
-              priority: 'high',
-            },
-            trigger: null,
-          });
+          await NotificationService.sendPushNotification(
+            'Appointment Booked',
+            'Your appointment has been successfully booked.',
+            { type: 'appointment_booked' }
+          );
           navigation.navigate('Home', { initialTab: 'Notification' });
         }}
       />
@@ -490,38 +477,19 @@ const styles = StyleSheet.create({
     fontSize: 18, 
     color: '#333' 
   },
-  phoneInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  countryCodeContainer: {
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderWidth: 1,
-    justifyContent: 'center',
-    borderColor: '#b1b1b1ff',
-    top: 10
-  },
-  countryCode: {
-    fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    color: '#1f2937',
-  },
   phoneInput: {
-    flex: 1,
-    backgroundColor: '#ffffffff',
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
+    borderWidth: 1,
+    borderColor: '#b1b1b1ff',
+    borderRadius: 8,
     paddingHorizontal: 16,
-    borderColor: '#b1b1b1ff', 
     paddingVertical: 15,
     fontFamily: 'Satoshi-Medium',
     fontSize: 16,
     color: '#000000',
-    borderWidth: 1,
-    top: 10
+    backgroundColor: '#ffffffff',
+    marginTop: 10,
+    height: 50,
+    width: 370,
   },
   totalContainer: { 
     marginTop: 50, 

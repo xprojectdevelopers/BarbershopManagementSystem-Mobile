@@ -2,3 +2,4 @@
 - Update userPassword.tsx to displayName
 - Update contactNum.tsx remove +63 UI
 - Test signup flow
+- Fix delivery update error in expo-delivery-webhook by adding receipt checking

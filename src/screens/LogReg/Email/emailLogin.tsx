@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RootStackParamList } from '../../../types/navigations'
 import { useAuth } from '../../../contexts/AuthContext'
+import { useNotification } from '../../../contexts/notificationContext'
 import NetInfo from '@react-native-community/netinfo';
 
 const validateEmail = (email: string): boolean => {
@@ -39,6 +40,7 @@ export default function EmailLogin() {
   const [showPassword, setShowPassword] = React.useState(false);
   const navigation = useNavigation<EmailLoginNavigationProp>()
   const {signIn, loading: authLoading} = useAuth()
+  const { refreshPushToken } = useNotification()
 
   const handleLogin = async () => {
     setLoginStatus('loading')
@@ -79,6 +81,12 @@ export default function EmailLogin() {
 
         if(!result.error) {
           setLoginStatus('success')
+          // Refresh push token after successful login
+          try {
+            await refreshPushToken()
+          } catch (tokenError) {
+            console.error('Error refreshing push token after login:', tokenError)
+          }
           setTimeout(() => {
             navigation.reset({
               index: 0,
@@ -90,7 +98,7 @@ export default function EmailLogin() {
             if(result.error.message.includes('Invalid login credentials')) {
               setNetworkError('Invalid email or password. Please try again.')
             } else if (result.error.message.includes('Email not confirmed')) {
-              setNetworkError('Please verify your email before logging in.')  
+              setNetworkError('Please verify your email before logging in.')
             } else if (
               result.error.message.includes('Network Error') ||
               result.error.message.includes('Network request failed')

@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native'
 import React, { useState } from 'react'
 
-// Define the type for dropdown items
 interface BarberItem {
   id: number;
   label: string;

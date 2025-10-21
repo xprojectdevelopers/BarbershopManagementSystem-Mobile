@@ -19,7 +19,7 @@ export default function SignUpOptions() {
       <TouchableOpacity onPress={() => navigation.navigate('GetStarted')} style={styles.backBtn}>
         <AntDesign name="arrow-left" size={34} color="black" />
       </TouchableOpacity>
-      <Text style={styles.Title}>Sign up to StreetCut</Text>
+      <Text style={styles.Title}>Sign up to MLV ST.</Text>
       <View style={styles.container}>
         
         <View style={styles.loginBtn}>
