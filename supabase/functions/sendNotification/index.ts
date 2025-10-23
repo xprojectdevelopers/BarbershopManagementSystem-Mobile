@@ -1,5 +1,5 @@
 // supabase/functions/send-push/index.ts
-import { Expo, ExpoPushMessage, ExpoPushErrorTicket, ExpoPushSuccessTicket } from "expo-server-sdk";
+import { Expo, ExpoPushMessage, ExpoPushErrorTicket } from "expo-server-sdk";
 import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
@@ -25,6 +25,9 @@ interface NotificationRequest {
 }
 
 Deno.serve(async (req: Request) => {
+  const startTime = Date.now();
+  console.log("🚀 SendNotification function triggered at:", new Date().toISOString());
+  
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
@@ -32,9 +35,10 @@ Deno.serve(async (req: Request) => {
     const { expoPushToken, title, message, data, sound = "default", badge, priority = "high", channelId } = body;
 
     console.log("📨 NEW NOTIFICATION REQUEST");
-    console.log("🎯 Target Token:", expoPushToken);
+    console.log("🎯 Target Token:", expoPushToken?.substring(0, 20) + "...");
     console.log("📋 Title:", title);
     console.log("💬 Message:", message);
+    console.log("⏱️ Request parsed in:", Date.now() - startTime, "ms");
 
     if (!expoPushToken || !title || !message) {
       return new Response(
@@ -51,6 +55,7 @@ Deno.serve(async (req: Request) => {
       });
 
     const expo = new Expo({ accessToken: expoAccessToken, useFcmV1: true });
+    console.log("⏱️ Expo client initialized in:", Date.now() - startTime, "ms");
 
     if (!Expo.isExpoPushToken(expoPushToken))
       return new Response(JSON.stringify({ success: false, error: `Invalid token: ${expoPushToken}` }), {
@@ -71,21 +76,35 @@ Deno.serve(async (req: Request) => {
       },
     ];
 
-    // 🟢 Send instantly — not queued manually
-    const [ticket] = await expo.sendPushNotificationsAsync(messages);
+    // 🟢 Send instantly with minimal timeout
+    const sendStartTime = Date.now();
+    const tickets = await expo.sendPushNotificationsAsync(messages) as unknown[];
+    const ticket = tickets[0] as { id: string; status: string; message?: string; details?: unknown };
+    console.log("📬 Notification sent in:", Date.now() - sendStartTime, "ms");
     console.log("📬 Ticket:", ticket);
 
-    // 🧾 Log immediately in Supabase
+    // 🧾 Log asynchronously to avoid blocking response
     const sent_at = new Date().toISOString();
-    await supabase.from("notification_logs").insert([
-      {
-        device_token: expoPushToken,
-        message,
-        status: ticket.status === "ok" ? "sent" : "error",
-        details: ticket,
-        sent_at,
-      },
-    ]);
+    const receiptId = ticket.id;
+    
+    // Don't await database insert - do it asynchronously
+    (async () => {
+      try {
+        await supabase.from("notification_logs").insert([
+          {
+            expo_receipt_id: receiptId,
+            device_token: expoPushToken,
+            message,
+            status: ticket.status === "ok" ? "sent" : "error",
+            details: ticket,
+            sent_at,
+          },
+        ]);
+        console.log("💾 Database log saved asynchronously");
+      } catch (error) {
+        console.error("❌ Database log error:", error);
+      }
+    })();
 
     if (ticket.status === "error") {
       const errorTicket = ticket as ExpoPushErrorTicket;
@@ -100,14 +119,22 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const successTicket = ticket as ExpoPushSuccessTicket;
+    // Return immediately - no background processing to keep response fast
+
+    const totalTime = Date.now() - startTime;
+    console.log("✅ Response ready in:", totalTime, "ms");
+    console.log("🚀 SendNotification completed at:", new Date().toISOString());
 
     return new Response(
       JSON.stringify({
         success: true,
         message: "Push sent instantly ⚡",
-        receiptId: successTicket.id,
+        receiptId: receiptId,
         sent_at,
+        timing: {
+          totalTime: totalTime + "ms",
+          sentAt: sent_at
+        }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

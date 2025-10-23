@@ -2,7 +2,8 @@
   "version": "3",
   "packages": {
     "specifiers": {
-      "npm:@supabase/supabase-js@^2.75.0": "npm:@supabase/supabase-js@2.75.0"
+      "npm:@supabase/supabase-js@^2.75.0": "npm:@supabase/supabase-js@2.75.0",
+      "npm:expo-server-sdk@^4.0.0": "npm:expo-server-sdk@4.0.0"
     },
     "npm": {
       "@supabase/auth-js@2.75.0": {
@@ -69,6 +70,39 @@
           "@types/node": "@types/node@18.16.19"
         }
       },
+      "err-code@2.0.3": {
+        "integrity": "sha512-2bmlRpNKBxT/CRmPOlyISQpNj+qSeYvcym/uT0Jx2bMOlKLtSy1ZmLuVxSEKKyor/N5yhvp/ZiG1oE3DEYMSFA==",
+        "dependencies": {}
+      },
+      "expo-server-sdk@4.0.0": {
+        "integrity": "sha512-zi83XtG2pqyP3gyn1JIRYkydo2i6HU3CYaWo/VvhZG/F29U+QIDv6LBEUsWf4ddZlVE7c9WN1N8Be49rHgO8OQ==",
+        "dependencies": {
+          "node-fetch": "node-fetch@2.7.0",
+          "promise-limit": "promise-limit@2.7.0",
+          "promise-retry": "promise-retry@2.0.1"
+        }
+      },
+      "node-fetch@2.7.0": {
+        "integrity": "sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==",
+        "dependencies": {
+          "whatwg-url": "whatwg-url@5.0.0"
+        }
+      },
+      "promise-limit@2.7.0": {
+        "integrity": "sha512-7nJ6v5lnJsXwGprnGXga4wx6d1POjvi5Qmf1ivTRxTjH4Z/9Czja/UCMLVmB9N93GeWOU93XaFaEt6jbuoagNw==",
+        "dependencies": {}
+      },
+      "promise-retry@2.0.1": {
+        "integrity": "sha512-y+WKFlBR8BGXnsNlIHFGPZmyDf3DFMoLhaflAnyZgV6rG6xu+JwesTo2Q9R6XwYmtmwAFCkAk3e35jEdoeh/3g==",
+        "dependencies": {
+          "err-code": "err-code@2.0.3",
+          "retry": "retry@0.12.0"
+        }
+      },
+      "retry@0.12.0": {
+        "integrity": "sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==",
+        "dependencies": {}
+      },
       "tr46@0.0.3": {
         "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==",
         "dependencies": {}
@@ -93,7 +127,8 @@
   "remote": {},
   "workspace": {
     "dependencies": [
-      "npm:@supabase/supabase-js@^2.75.0"
+      "npm:@supabase/supabase-js@^2.75.0",
+      "npm:expo-server-sdk@^4.0.0"
     ]
   }
 }

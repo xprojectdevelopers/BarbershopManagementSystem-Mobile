@@ -87,6 +87,45 @@ const PushNotifScreen: React.FC = () => {
     }
   };
 
+  // 🔍 Check webhook logs from database
+  const checkWebhookLogs = async () => {
+    log("🔍 Checking webhook logs from database...");
+    
+    try {
+      const { data: logs, error } = await supabase
+        .from('notification_logs')
+        .select('*')
+        .order('sent_at', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        log(`❌ Error fetching logs: ${error.message}`);
+        return;
+      }
+
+      if (!logs || logs.length === 0) {
+        log("📭 No webhook logs found");
+        return;
+      }
+
+      log(`📊 Found ${logs.length} recent webhook logs:`);
+      
+      logs.forEach((logEntry, index) => {
+        log(`--- Log ${index + 1} ---`);
+        log(`🕐 Sent: ${logEntry.sent_at}`);
+        log(`📱 Token: ${logEntry.device_token?.substring(0, 20)}...`);
+        log(`📝 Message: ${logEntry.message}`);
+        log(`✅ Status: ${logEntry.status}`);
+        log(`📦 Delivery: ${logEntry.delivery_status || 'N/A'}`);
+        log(`🕐 Delivered: ${logEntry.delivered_at || 'N/A'}`);
+        log('');
+      });
+
+    } catch (err) {
+      log(`💥 Error checking logs: ${String(err)}`);
+    }
+  };
+
   // 🚀 Send test notification manually
   const handleTestNotification = async () => {
     if (!expoPushToken) {
@@ -169,6 +208,10 @@ const PushNotifScreen: React.FC = () => {
 
       <TouchableOpacity style={styles.button} onPress={handleTestNotification}>
         <Text style={styles.buttonText}>Send Test Notification</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.button, { backgroundColor: '#6366f1' }]} onPress={checkWebhookLogs}>
+        <Text style={styles.buttonText}>🔍 Check Webhook Logs</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.secondaryButton} onPress={savePushToken}>

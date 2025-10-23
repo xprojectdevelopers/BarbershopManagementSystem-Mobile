@@ -88,10 +88,13 @@ export async function insertDropdownSelection(data: InsertData) {
       return { success: false, error }
     }
 
-    // Send push notification using Supabase function
+    // Send push notification using optimized Supabase function
     if (pushToken) {
+      const notificationStartTime = Date.now();
+      console.log('📱 Sending appointment notification...');
+      
       try {
-        await supabase.functions.invoke('sendNotification', {
+        const notificationResult = await supabase.functions.invoke('sendNotification', {
           body: {
             expoPushToken: pushToken,
             title: 'Appointment Booked',
@@ -99,9 +102,19 @@ export async function insertDropdownSelection(data: InsertData) {
             data: { type: 'appointment_booked', appointment_id: insertedData?.[0]?.id },
           },
         });
+
+        const notificationTime = Date.now() - notificationStartTime;
+        console.log(`✅ Notification sent in ${notificationTime}ms`);
+        
+        if (notificationResult.data?.timing) {
+          console.log('📊 Server timing:', notificationResult.data.timing);
+        }
       } catch (notificationError) {
-        console.error('Failed to send push notification:', notificationError);
+        console.error('❌ Failed to send push notification:', notificationError);
+        // Don't fail the entire booking if notification fails
       }
+    } else {
+      console.warn('⚠️ No push token available for user');
     }
 
     return { success: true, data: insertedData }

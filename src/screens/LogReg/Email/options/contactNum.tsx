@@ -28,28 +28,17 @@ const [formatError, setFormatError] = useState('');
 
 const formatPhoneNumber = (input: string) => {
   const digits = input.replace(/\D/g, '');
-  const limitedDigits = digits.slice(0, 10);
-
-  let formatted = ''
-  if(limitedDigits.length > 0) {
-    formatted = limitedDigits
-    if(limitedDigits.length > 3) {
-      formatted = `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
-      }
-    if (limitedDigits.length > 6) {
-        formatted = `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6)}`;
-      }
-    }
-    return formatted
-  }
+  const limitedDigits = digits.slice(0, 11);
+  return limitedDigits;
+}
 
   const handlePhoneNumberChange = (text: string) => {
     const formatted = formatPhoneNumber(text);
     setContactNumber(formatted);
 
     const digits = text.replace(/\D/g, '');
-    if(digits.length > 0 && digits.length < 10) {
-      setFormatError('Phone number must be 10 digits');
+    if(digits.length > 0 && digits.length < 11) {
+      setFormatError('Phone number must be 11 digits');
     } else {
       setFormatError('')
     }
@@ -80,7 +69,7 @@ const formatPhoneNumber = (input: string) => {
                 <Text style={styles.countryCode}>+63</Text>
               </View>
               <TextInput
-                placeholder='XXX-XXX-XXXX'
+                placeholder='XXXXXXXXXXX'
                 placeholderTextColor={'#6b7280'}
                 keyboardType='phone-pad'
                 autoCapitalize='none'

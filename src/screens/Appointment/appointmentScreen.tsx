@@ -76,6 +76,8 @@ export default function AppointmentScreen() {
   const [tooltipVisible, setTooltipVisible] = React.useState(false);
   const [tooltip2Visible, setTooltip2Visible] = React.useState(false);
   const [tooltip3Visible, setTooltip3Visible] = React.useState(false);
+  const [isBooking, setIsBooking] = React.useState(false);
+  const [bookingStep, setBookingStep] = React.useState('');
 
   React.useEffect(() => {
     if (user) {
@@ -141,29 +143,51 @@ export default function AppointmentScreen() {
 
   const handleBookAppointment = async (paymentMethod: string) => {
     if (!selectedBarber || !selectedService || !selectedTime || !date) {
-      alert('Please fill in all fields');
+      Alert.alert('Validation Error', 'Please fill in all fields');
       return;
     }
 
-    console.log('Booking appointment...');
+    const bookingStartTime = Date.now();
+    setIsBooking(true);
+    setBookingStep('Validating appointment details...');
 
-    const result = await insertDropdownSelection({
-      barber_id: 'Barber - Zed',
-      service_id: selectedService.name,
-      sched_date: date.toISOString().split('T')[0],
-      sched_time: selectedTime,
-      subtotal,
-      appointment_fee: appointmentFee,
-      total,
-      status: 'On Going',
-      payment_method: paymentMethod,
-    });
+    try {
+      console.log('🚀 Starting appointment booking process...');
+      console.log('📅 Appointment details:', {
+        barber: selectedBarber.label,
+        service: selectedService.name,
+        date: date.toISOString().split('T')[0],
+        time: selectedTime,
+        payment: paymentMethod
+      });
 
-    if (result.success) {
-      console.log('Appointment successfully inserted!');
-      setModalVisible(true);
-    } else {
-      alert('Failed to book appointment. Please try again.');
+      setBookingStep('Saving appointment...');
+      const result = await insertDropdownSelection({
+        barber_id: `Barber - ${selectedBarber.label}`,
+        service_id: selectedService.name,
+        sched_date: date.toISOString().split('T')[0],
+        sched_time: selectedTime,
+        subtotal,
+        appointment_fee: appointmentFee,
+        total,
+        status: 'On Going',
+        payment_method: paymentMethod,
+      });
+
+      if (result.success) {
+        const bookingTime = Date.now() - bookingStartTime;
+        console.log(`✅ Appointment successfully inserted in ${bookingTime}ms!`);
+        setBookingStep('Appointment booked successfully!');
+        setModalVisible(true);
+      } else {
+        throw new Error((result.error as any)?.message || 'Failed to book appointment');
+      }
+    } catch (error) {
+      console.error('❌ Booking error:', error);
+      Alert.alert('Booking Error', 'Failed to book appointment. Please try again.');
+    } finally {
+      setIsBooking(false);
+      setBookingStep('');
     }
   };
 
@@ -173,22 +197,40 @@ export default function AppointmentScreen() {
       return;
     }
 
+    const bookingStartTime = Date.now();
+    setIsBooking(true);
+    setBookingStep('Processing cash payment...');
+
     try {
-      await insertDropdownSelection({
-      barber_id: `Barber - ${selectedBarber.label}`,
-      service_id: selectedService.name,
-      sched_date: date.toISOString().split('T')[0],
-      sched_time: selectedTime,
-      subtotal,
-      appointment_fee: appointmentFee,
-      total,
-      status: 'On Going',
-      payment_method: 'Cash',
-    });
-    setModalVisible(true);
+      console.log('🚀 Starting cash payment appointment booking...');
+      setBookingStep('Saving appointment...');
+      
+      const result = await insertDropdownSelection({
+        barber_id: `Barber - ${selectedBarber.label}`,
+        service_id: selectedService.name,
+        sched_date: date.toISOString().split('T')[0],
+        sched_time: selectedTime,
+        subtotal,
+        appointment_fee: appointmentFee,
+        total,
+        status: 'On Going',
+        payment_method: 'Cash',
+      });
+
+      if (result.success) {
+        const bookingTime = Date.now() - bookingStartTime;
+        console.log(`✅ Cash payment appointment booked in ${bookingTime}ms!`);
+        setBookingStep('Appointment booked successfully!');
+        setModalVisible(true);
+      } else {
+        throw new Error((result.error as any)?.message || 'Failed to book appointment');
+      }
     } catch (error) {
+      console.error('❌ Cash booking error:', error);
       Alert.alert('Booking Error', 'Failed to book appointment. Please try again.');
-      console.error('Booking error:', error);
+    } finally {
+      setIsBooking(false);
+      setBookingStep('');
     }
   };
 
@@ -292,15 +334,40 @@ export default function AppointmentScreen() {
             <Ionicons name="information-circle-outline" size={18} color="black" />
           </Pressable>
          </View>
-          <TouchableOpacity style={styles.gcashBtn} onPress={() => handleBookAppointment('GCash')}>
-            <Text style={styles.gcashText}>Pay with Gcash</Text>
+          <TouchableOpacity 
+            style={[styles.gcashBtn, isBooking && styles.disabledBtn]} 
+            onPress={() => handleBookAppointment('GCash')}
+            disabled={isBooking}
+          >
+            <Text style={styles.gcashText}>
+              {isBooking && bookingStep.includes('GCash') ? 'Processing...' : 'Pay with Gcash'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.mayaBtn} onPress={() => handleBookAppointment('Maya')}>
-            <Text style={styles.mayaText}>Pay with Maya</Text>
+          <TouchableOpacity 
+            style={[styles.mayaBtn, isBooking && styles.disabledBtn]} 
+            onPress={() => handleBookAppointment('Maya')}
+            disabled={isBooking}
+          >
+            <Text style={styles.mayaText}>
+              {isBooking && bookingStep.includes('Maya') ? 'Processing...' : 'Pay with Maya'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.payInPersonBtn} onPress={handlePayInPerson}>
-            <Text style={styles.payInPersonText}>Pay with Cash</Text>
+          <TouchableOpacity 
+            style={[styles.payInPersonBtn, isBooking && styles.disabledBtn]} 
+            onPress={handlePayInPerson}
+            disabled={isBooking}
+          >
+            <Text style={styles.payInPersonText}>
+              {isBooking && bookingStep.includes('Cash') ? 'Processing...' : 'Pay with Cash'}
+            </Text>
           </TouchableOpacity>
+          
+          {/* Loading indicator */}
+          {isBooking && (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>{bookingStep}</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -315,11 +382,21 @@ export default function AppointmentScreen() {
         onClose={() => setModalVisible(false)}
         onConfirm={async () => {
           setModalVisible(false);
-          await NotificationService.sendPushNotification(
+          
+          // Send notification asynchronously for faster response
+          console.log('📱 Sending appointment confirmation notification...');
+          
+          // Don't await - send notification in background
+          NotificationService.sendPushNotification(
             'Appointment Booked',
             'Your appointment has been successfully booked.',
             { type: 'appointment_booked' }
-          );
+          ).then((result) => {
+            console.log('✅ Notification sent:', result.success ? 'Success' : 'Failed');
+          }).catch((error) => {
+            console.error('❌ Notification error:', error);
+          });
+          
           navigation.navigate('Home', { initialTab: 'Notification' });
         }}
       />
@@ -594,5 +671,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     marginTop: 10,
     color: '#000',
+  },
+  disabledBtn: {
+    opacity: 0.6,
+  },
+  loadingContainer: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Regular',
+    color: '#666',
+    textAlign: 'center',
   },
 });

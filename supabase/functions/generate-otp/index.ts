@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.1";
+import { serve } from "std/http/server.ts";
+import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -16,8 +16,21 @@ serve(async (req: Request) => {
   }
 
   try {
+    // 1️⃣ Check Authorization
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) throw new Error("Missing authorization header");
+
+    const token = authHeader.replace("Bearer ", "");
+    if (!token) throw new Error("Invalid authorization token");
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) throw new Error("Unauthorized");
+
+    // 2️⃣ Parse request body
     const { email, otp } = await req.json() as { email?: string; otp?: string };
-    
+
     if (!email || !otp) {
       throw new Error("Missing email or OTP");
     }
@@ -33,7 +46,16 @@ serve(async (req: Request) => {
       throw new Error("Invalid OTP format");
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // 3️⃣ Check if user exists and is the current authenticated user
+    const { data: existingUser, error: userError } = await supabase
+      .from("customer_profiles")
+      .select("email")
+      .eq("id", user.id)
+      .single();
+
+    if (userError || !existingUser) {
+      throw new Error("User profile not found");
+    }
 
     // Get OTP from database
     const { data: otpRecord, error: fetchError } = await supabase
