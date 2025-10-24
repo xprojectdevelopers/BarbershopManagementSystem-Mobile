@@ -40,7 +40,7 @@ const socialMediaData = [
     id: '4',
     title: 'Google Form',
     name: 'Tell us what you think',
-    image: require('../../../assets/img/Social Media/img4.png'),
+    image: require('../../../assets/img/Social Media/img4.jpg'),
     link: 'https://docs.google.com/forms/d/e/1FAIpQLSfZe_Gh7zizByHCArr5UxzM76bnr6508XSvr8epvkaRnHZuTQ/viewform?usp=header'
   },
 ];

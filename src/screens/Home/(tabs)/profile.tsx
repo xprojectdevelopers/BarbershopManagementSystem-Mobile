@@ -16,6 +16,8 @@ import { getProfileById, CustomerProfile } from '../../../lib/supabase/profileFu
 import { useEffect } from 'react';
 import ChangePasswordModal from '../../../components/Modals/changePassword';
 import AccountInfoModal from '../../../components/Modals/accountInfo';
+import PhotoOptionsModal from '../../../components/Modals/photoOptions';
+import { Camera } from 'expo-camera';
 
 //icons
 import { Ionicons, MaterialIcons, Feather, FontAwesome6 } from '@expo/vector-icons';
@@ -30,6 +32,9 @@ export default function ProfileSettingsScreen() {
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [isChangePasswordModalVisible, setIsChangePasswordModalVisible] = useState(false);
   const [isAccountInfoModalVisible, setIsAccountInfoModalVisible] = useState(false);
+  const [isPhotoOptionsModalVisible, setIsPhotoOptionsModalVisible] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [cameraRef, setCameraRef] = useState<any>(null);
 
   const navigation = useNavigation<ProfileSettingsScreenNavigationProp>();
   const { signOut, user } = useAuth();
@@ -45,6 +50,13 @@ export default function ProfileSettingsScreen() {
     };
     fetchProfile();
   }, [user]);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    })();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -141,7 +153,7 @@ export default function ProfileSettingsScreen() {
             <Text style={styles.locationText}>{profile?.email || ''}</Text>
           </View>
 
-          <TouchableOpacity style={styles.upgradeButton}>
+          <TouchableOpacity style={styles.upgradeButton} onPress={() => setIsPhotoOptionsModalVisible(true)}>
             <Text style={styles.upgradeButtonText}>Change Photo</Text>
           </TouchableOpacity>
         </View> 
@@ -199,6 +211,32 @@ export default function ProfileSettingsScreen() {
       <AccountInfoModal
         visible={isAccountInfoModalVisible}
         onClose={() => setIsAccountInfoModalVisible(false)}
+      />
+
+      <PhotoOptionsModal
+        visible={isPhotoOptionsModalVisible}
+        onClose={() => setIsPhotoOptionsModalVisible(false)}
+        onCamera={async () => {
+          if (hasPermission === null) {
+            console.log('Camera permission is null');
+            return;
+          }
+          if (hasPermission === false) {
+            console.log('Camera permission denied');
+            return;
+          }
+          console.log('Opening camera');
+          // Here you can navigate to a camera screen or open camera modal
+          setIsPhotoOptionsModalVisible(false);
+        }}
+        onGallery={() => {
+          console.log('Gallery selected');
+          setIsPhotoOptionsModalVisible(false);
+        }}
+        onRemove={() => {
+          console.log('Remove selected');
+          setIsPhotoOptionsModalVisible(false);
+        }}
       />
     </SafeAreaView>
   );

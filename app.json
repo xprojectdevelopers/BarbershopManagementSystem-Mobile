@@ -1,37 +1,43 @@
 {
   "expo": {
-    "name": "MolaveStreetBarbers",
+    "name": "MLV St", 
     "slug": "MolaveStreetBarbers",
     "scheme": "com.fr4nc.mlvst",
     "version": "1.6.04",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/img/Favicon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/img/Mobile Logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "android": {
+      "package": "com.fr4nc.mlvst",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/img/Favicon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.fr4nc.MLV_St",
       "googleServicesFile": "./google-services.json",
-      // "useNextNotificationsApi": true,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "POST_NOTIFICATIONS"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "https", "host": "molavestreetbarbers.com" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "platforms": ["ios", "android"],
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/img/Favicon.png"
     },
     "notification": {
       "icon": "./assets/icon.png",
@@ -65,7 +71,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "d0ed855a-2577-4ad8-a1d3-b2b516b06382"
+        "projectId": "94ce3340-6d34-42b1-853e-0db28ff972be"
       }
     },
     "owner": "fr4nc"

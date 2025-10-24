@@ -48,7 +48,7 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <Animated.Image
         style={[styles.icon, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}
-        source={require('../../../assets/icon/app-icon.png')}
+        source={require('../../../assets/img/Mobile Logo.png')}
       />
       {showLoading && (
         <ActivityIndicator size="large" color="#333" style={styles.loadingIndicator} />
@@ -63,10 +63,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {
-    width: 250,
-    height: 250,
-  },
+  // icon: {
+  //   width: 250,
+  //   height: 250,
+  // },
   loadingIndicator: {
     marginTop: 20,
   }
