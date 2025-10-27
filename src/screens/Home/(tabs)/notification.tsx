@@ -19,6 +19,7 @@ import * as Notifications from 'expo-notifications';
 
 // components
 import ReceiptModal from '../../../components/Modals/receipt';
+import NotificationViewer from '../../../components/Modals/notificationViewer';
 
 interface Appointment {
   id?: string;
@@ -31,6 +32,15 @@ interface Appointment {
   barber_id: string;
   service_id: string;
   payment_method?: string;
+}
+
+interface Notification {
+  id: string;
+  user_id: string;
+  receipt_id?: string;
+  title: string;
+  description?: string;
+  created_at: string;
 }
 
 const barberMap: { [key: string]: string } = {
@@ -64,6 +74,28 @@ const formatDate = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
+const formatStatus = (status: string): string => {
+  if (status === 'cancelled') {
+    return 'Cancelled';
+  }
+  return status;
+};
+
+
+
+const getStatusButtonText = (status: string) => {
+  const negativeStatuses = ['Cancelled', 'No Show'];
+  const positiveStatuses = ['Approved', 'Completed'];
+
+  if (negativeStatuses.includes(status)) {
+    return status;
+  } else if (positiveStatuses.includes(status)) {
+    return status;
+  } else {
+    return 'Cancel Appointment'; // Default for other statuses like 'On Going'
+  }
+};
+
 export default function Notification() {
   const { user, loading: authLoading, refreshSession } = useAuth();
   const { expoPushToken } = useNotification();
@@ -71,6 +103,10 @@ export default function Notification() {
   const [activeTab, setActiveTab] = useState('Notification');
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationRetry, setNotificationRetry] = useState(false);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -78,6 +114,9 @@ export default function Notification() {
   const [statusLoading, setStatusLoading] = useState(false);
   const [showRetry, setShowRetry] = useState(false);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [notificationViewerVisible, setNotificationViewerVisible] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
@@ -88,6 +127,9 @@ export default function Notification() {
     return () => {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
+      }
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
       }
     };
   }, [activeTab]);
@@ -101,6 +143,38 @@ export default function Notification() {
         }
       };
       fetchAppointments();
+
+      // Fetch notifications
+      const fetchNotifications = async () => {
+        setNotificationLoading(true);
+        setNotificationRetry(false);
+        try {
+          const { data, error } = await supabase
+            .from('notification_loader')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('Error fetching notifications:', error);
+            // Set timeout for retry if no data loaded
+            notificationTimeoutRef.current = setTimeout(() => {
+              setNotificationRetry(true);
+            }, 10000);
+          } else {
+            setNotifications(data || []);
+          }
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+          // Set timeout for retry if no data loaded
+          notificationTimeoutRef.current = setTimeout(() => {
+            setNotificationRetry(true);
+          }, 10000);
+        } finally {
+          setNotificationLoading(false);
+        }
+      };
+      fetchNotifications();
     } else if (!authLoading) {
       // No user and auth not loading, start status loading and timeout
       setStatusLoading(true);
@@ -113,66 +187,86 @@ export default function Notification() {
     }
   }, [user, authLoading]);
 
-  const renderNotificationContent = () => (
-    <ScrollView style={styles.notifBox} showsVerticalScrollIndicator={false}>
-      <View style={styles.notif}>
-        <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
-        <View style={styles.notifContent}>
-          <Text style={styles.notifTitle}>New Appointment</Text>
-          <Text style={styles.notifText}>You have a new appointment at 12:00 PM on...</Text>
-        </View>
-      </View>
-      <View style={styles.notif}>
-        <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
-        <View style={styles.notifContent}>
-          <Text style={styles.notifTitle}>New Appointment</Text>
-          <Text style={styles.notifText}>You have a new appointment at 12:00 PM on...</Text>
-        </View>
-      </View>
-      <View style={styles.notif}>
-        <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
-        <View style={styles.notifContent}>
-          <Text style={styles.notifTitle}>New Appointment</Text>
-          <Text style={styles.notifText}>You have a new appointment at 12:00 PM on...</Text>
-        </View>
-      </View>
-      <View style={styles.notif}>
-        <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
-        <View style={styles.notifContent}>
-          <Text style={styles.notifTitle}>New Appointment</Text>
-          <Text style={styles.notifText}>You have a new appointment at 12:00 PM on...</Text>
-        </View>
-      </View>
-      <View style={styles.notif}>
-        <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
-        <View style={styles.notifContent}>
-          <Text style={styles.notifTitle}>New Appointment</Text>
-          <Text style={styles.notifText}>You have a new appointment at 12:00 PM on...</Text>
-        </View>
-      </View>
-      <View style={styles.notif}>
-        <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
-        <View style={styles.notifContent}>
-          <Text style={styles.notifTitle}>New Appointment</Text>
-          <Text style={styles.notifText}>You have a new appointment at 12:00 PM on...</Text>
-        </View>
-      </View>
-      <View style={styles.notif}>
-        <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
-        <View style={styles.notifContent}>
-          <Text style={styles.notifTitle}>New Appointment</Text>
-          <Text style={styles.notifText}>You have a new appointment at 12:00 PM on...</Text>
-        </View>
-      </View>
-      <View style={styles.notif}>
-        <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
-        <View style={styles.notifContent}>
-          <Text style={styles.notifTitle}>New Appointment</Text>
-          <Text style={styles.notifText}>You have a new appointment at 12:00 PM on...</Text>
-        </View>
-      </View>
-    </ScrollView>
-  );
+  const renderNotificationContent = () => {
+    if (notificationLoading) {
+      return (
+        <ScrollView style={styles.notifBox} showsVerticalScrollIndicator={false}>
+          <View style={styles.placeholder}>
+            <ActivityIndicator size="large" color="#000" />
+            <Text style={styles.placeholderText}>Loading notifications...</Text>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    if (notificationRetry) {
+      return (
+        <ScrollView style={styles.notifBox} showsVerticalScrollIndicator={false}>
+          <View style={styles.placeholder}>
+            <TouchableOpacity onPress={() => {
+              setNotificationRetry(false);
+              setNotificationLoading(true);
+              // Refetch notifications
+              const fetchNotifications = async () => {
+                try {
+                  const { data, error } = await supabase
+                    .from('notification_loader')
+                    .select('*')
+                    .eq('user_id', user?.id)
+                    .order('created_at', { ascending: false });
+
+                  if (error) {
+                    console.error('Error fetching notifications:', error);
+                    // Set timeout for retry if no data loaded
+                    notificationTimeoutRef.current = setTimeout(() => {
+                      setNotificationRetry(true);
+                    }, 10000);
+                  } else {
+                    setNotifications(data || []);
+                  }
+                } catch (error) {
+                  console.error('Error fetching notifications:', error);
+                  // Set timeout for retry if no data loaded
+                  notificationTimeoutRef.current = setTimeout(() => {
+                    setNotificationRetry(true);
+                  }, 10000);
+                } finally {
+                  setNotificationLoading(false);
+                }
+              };
+              fetchNotifications();
+            }}>
+              <Text style={styles.placeholderText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    if (notifications.length === 0) {
+      return (
+        <ScrollView style={styles.notifBox} showsVerticalScrollIndicator={false}>
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>No notifications</Text>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.notifBox} showsVerticalScrollIndicator={false}>
+        {notifications.map((notification) => (
+          <TouchableOpacity key={notification.id} style={styles.notif} onPress={() => { setSelectedNotification(notification); setNotificationViewerVisible(true); }}>
+            <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
+            <View style={styles.notifContent}>
+              <Text style={styles.notifTitle}>{notification.title}</Text>
+              <Text style={styles.notifText}>{notification.description}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    );
+  };
 
   const renderStatusContent = () => {
     if (authLoading) {
@@ -242,7 +336,7 @@ export default function Notification() {
             <View style={styles.notifContent}>
               <Text style={styles.notifTitle}>{formatDate(appointment.sched_date)}</Text>
               <Text style={styles.notifText}>Appointment Status:
-               <Text style={{fontFamily: 'Satoshi-Bold', color: 'black' }}> {appointment.status}</Text>
+               <Text style={{fontFamily: 'Satoshi-Bold', color: 'black' }}> {formatStatus(appointment.status)}</Text>
               </Text>
             </View>
             <TouchableOpacity style={styles.viewBtn} onPress={() => { setSelectedAppointment(appointment); setModalVisible(true); }}>
@@ -258,36 +352,29 @@ export default function Notification() {
   const getServiceName = (id: string) => serviceMap[id] || 'Unknown Service';
 
   const handleCancelAppointment = async () => {
-    if (!selectedAppointment || selectedAppointment.status === 'cancelled') {
+    if (!selectedAppointment || selectedAppointment.status === 'Cancelled') {
       return;
     }
 
     console.log('Cancelling appointment...');
-    const { success, error } = await updateAppointmentStatus(selectedAppointment.id!, 'cancelled');
+    const { success, error } = await updateAppointmentStatus(selectedAppointment.id!, 'Cancelled');
     if (success) {
       console.log('Appointment cancelled successfully');
 
       // Send cancellation notification using context
       try {
-        const { sendNotification, sendLocalNotification } = useNotification();
-        
+        const { sendNotification } = useNotification();
+
         // Send push notification
         await sendNotification(
           'Appointment Cancelled',
           `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
           { appointmentId: selectedAppointment.id, action: 'cancelled' }
         );
-        
-        // Also send local notification immediately
-        await sendLocalNotification(
-          'Appointment Cancelled',
-          `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
-          { appointmentId: selectedAppointment.id, action: 'cancelled' }
-        );
-        
-        console.log('Cancellation notifications sent successfully');
+
+        console.log('Cancellation notification sent successfully');
       } catch (notificationError) {
-        console.log('Error sending cancellation notifications:', notificationError);
+        console.log('Error sending cancellation notification:', notificationError);
       }
 
       // Refetch appointments to update the list
@@ -296,7 +383,7 @@ export default function Notification() {
         setAppointments(data || []);
       }
       // Update selected appointment status
-      setSelectedAppointment({ ...selectedAppointment, status: 'cancelled' });
+      setSelectedAppointment({ ...selectedAppointment, status: 'Cancelled' });
       // Close modal
       setModalVisible(false);
     } else {
@@ -378,21 +465,29 @@ export default function Notification() {
               <TouchableOpacity
                 style={[
                   styles.cancelBtn,
-                  selectedAppointment?.status === 'cancelled' ? styles.cancelledBtn : null
+                  (selectedAppointment?.status === 'Cancelled' || selectedAppointment?.status === 'No Show' || selectedAppointment?.status === 'Approved' || selectedAppointment?.status === 'Completed') && styles.disabledBtn
                 ]}
                 onPress={handleCancelAppointment}
-                disabled={selectedAppointment?.status === 'cancelled'}
+                disabled={selectedAppointment?.status === 'Cancelled' || selectedAppointment?.status === 'No Show' || selectedAppointment?.status === 'Approved' || selectedAppointment?.status === 'Completed'}
               >
-                <Text style={[
-                  styles.cancelBtnText,
-                  selectedAppointment?.status === 'cancelled' ? styles.cancelledBtnText : null
-                ]}>
-                  {selectedAppointment?.status === 'cancelled' ? 'Cancelled' : 'Cancel Appointment'}
+                <Text style={styles.cancelBtnText}>
+                  {getStatusButtonText(selectedAppointment?.status || '')}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
         </Pressable>
+      </Modal>
+      <Modal
+        visible={notificationViewerVisible}
+        transparent={true}
+        onRequestClose={() => setNotificationViewerVisible(false)}
+      >
+        <NotificationViewer
+          visible={notificationViewerVisible}
+          onClose={() => setNotificationViewerVisible(false)}
+          notification={selectedNotification}
+        />
       </Modal>
     </View>
   )
@@ -447,7 +542,7 @@ const styles = StyleSheet.create({
   },
   notifBox: {
     width: 380,
-    height: 590,
+    height: 530,
     top: 150,
     borderRadius: 10,
   },
@@ -674,10 +769,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
   },
-  cancelledBtn: {
-    backgroundColor: '#cccccc',
+  disabledBtn: {
+    backgroundColor: '#858585ff',
   },
-  cancelledBtnText: {
-    color: '#666666',
-  }
 })

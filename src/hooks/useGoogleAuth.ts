@@ -13,35 +13,62 @@ export const useGoogleAuth = () => {
     setLoading(true);
     try {
       const redirectUrl = makeRedirectUri({
-        path: '/auth/callback',
+        scheme: 'com.fr4nc.mlvst',
+        path: 'auth/callback',
       });
+
+      console.log('Redirect URL:', redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
         },
       });
 
       if (error) throw error;
+      if (!data?.url) throw new Error('No authentication URL received');
 
       const result = await WebBrowser.openAuthSessionAsync(
-        data?.url!,
+        data.url,
         redirectUrl
       );
 
       if (result.type === 'success') {
         const url = new URL(result.url);
-        const params = new URLSearchParams(url.hash.substring(1));
+        
+        // Check for errors first
+        const hashParams = new URLSearchParams(url.hash.substring(1));
+        const queryParams = new URLSearchParams(url.search);
+        
+        const error = hashParams.get('error') || queryParams.get('error');
+        const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
+        
+        if (error) {
+          console.error('OAuth Error:', error);
+          console.error('Description:', decodeURIComponent(errorDescription || ''));
+          
+          // Return user-friendly error message
+          if (errorDescription?.includes('exchange external code')) {
+            return { 
+              success: false, 
+              error: new Error('Google authentication setup error. Please contact support.') 
+            };
+          }
+          return { success: false, error: new Error(errorDescription || error) };
+        }
 
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
+        // Try to get tokens
+        let access_token = hashParams.get('access_token') || queryParams.get('access_token');
+        let refresh_token = hashParams.get('refresh_token') || queryParams.get('refresh_token');
 
-        if (access_token) {
+        if (access_token && refresh_token) {
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token,
-            refresh_token: refresh_token!,
+            refresh_token,
           });
+
           if (sessionError) throw sessionError;
 
           const user = sessionData.session?.user;
@@ -49,13 +76,22 @@ export const useGoogleAuth = () => {
             // Check if profile exists
             const { success: profileSuccess } = await getProfileById(user.id);
             if (!profileSuccess) {
-              // Insert profile
+              // Register for push notifications
+              let pushToken = null;
+              try {
+                const { registerForPushNotificationsAsync } = await import('../utils/registerForPushNotificationAsync');
+                pushToken = await registerForPushNotificationsAsync();
+              } catch (error) {
+                console.warn('⚠️ No push token available for user:', error);
+              }
+
               const profile = {
                 id: user.id,
                 email: user.email,
                 display_name: user.user_metadata?.full_name || user.email,
-                username: null,
                 contact_number: null,
+                push_token: pushToken,
+                profile_image_url: user.user_metadata?.picture || null,
               };
               await insertProfile(profile);
             }
@@ -63,6 +99,7 @@ export const useGoogleAuth = () => {
 
           return { success: true, data: { user } };
         } else {
+          console.error('Full URL:', result.url);
           return { success: false, error: new Error('No access token received') };
         }
       } else if (result.type === 'cancel') {
@@ -71,7 +108,7 @@ export const useGoogleAuth = () => {
         return { success: false, error: new Error('Authentication failed') };
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Google Auth Error:', error);
       return { success: false, error };
     } finally {
       setLoading(false);

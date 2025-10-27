@@ -6,18 +6,21 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../types/navigations';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getProfileById, CustomerProfile } from '../../../lib/supabase/profileFunctions';
+import { getProfileById, CustomerProfile, uploadProfileImage } from '../../../lib/supabase/profileFunctions';
 import { useEffect } from 'react';
 import ChangePasswordModal from '../../../components/Modals/changePassword';
 import AccountInfoModal from '../../../components/Modals/accountInfo';
 import PhotoOptionsModal from '../../../components/Modals/photoOptions';
 import { Camera } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 
 //icons
 import { Ionicons, MaterialIcons, Feather, FontAwesome6 } from '@expo/vector-icons';
@@ -27,7 +30,7 @@ type ProfileSettingsScreenNavigationProp = NativeStackNavigationProp<
   'GetStarted' | 'About'
 >;
 
-export default function ProfileSettingsScreen() {
+export default function ProfileSettingsScreen({ refreshProfileImage }: { refreshProfileImage?: () => void }) {
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [isChangePasswordModalVisible, setIsChangePasswordModalVisible] = useState(false);
@@ -35,18 +38,24 @@ export default function ProfileSettingsScreen() {
   const [isPhotoOptionsModalVisible, setIsPhotoOptionsModalVisible] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [cameraRef, setCameraRef] = useState<any>(null);
+  const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const navigation = useNavigation<ProfileSettingsScreenNavigationProp>();
   const { signOut, user } = useAuth();
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setIsLoading(true);
       if (user?.id) {
         const { success, data } = await getProfileById(user.id);
-        if (success) {
+        if (success && data !== undefined) {
           setProfile(data);
+          setProfileImageUri(data.profile_image_url || null);
         }
       }
+      setIsLoading(false);
     };
     fetchProfile();
   }, [user]);
@@ -70,7 +79,167 @@ export default function ProfileSettingsScreen() {
     }
   };
 
+  const handleTestNotification = async () => {
+    const startTime = Date.now();
+    console.log('🚀 Starting test notification at:', new Date().toISOString());
 
+    try {
+      console.log('📱 Requesting push token...');
+      const tokenStart = Date.now();
+      const { registerForPushNotificationsAsync } = await import('../../../utils/registerForPushNotificationAsync');
+      const token = await registerForPushNotificationsAsync();
+      const tokenTime = Date.now() - tokenStart;
+      console.log('✅ Token obtained in:', tokenTime, 'ms');
+
+      if (token) {
+        console.log('📤 Sending test notification...');
+        const sendStart = Date.now();
+        const { sendTestExpoNotification } = await import('../../../services/testPushService');
+        const result = await sendTestExpoNotification(token, 'Test Notification', 'This is a test from the server!');
+        const sendTime = Date.now() - sendStart;
+        console.log('📦 Notification sent in:', sendTime, 'ms');
+        console.log('📋 Response:', result);
+
+        const totalTime = Date.now() - startTime;
+        console.log('🎯 Total test time:', totalTime, 'ms');
+
+        Alert.alert('Success', `Test notification sent in ${sendTime}ms!`);
+      } else {
+        console.error('❌ No push token received');
+        Alert.alert('Error', 'Failed to get push token');
+      }
+    } catch (error) {
+      const errorTime = Date.now() - startTime;
+      console.error('💥 Test notification error after', errorTime, 'ms:', error);
+      Alert.alert('Error', `Failed to send test notification: ${(error as Error).message || error}`);
+    }
+  };
+
+  const onCamera = async () => {
+    try {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera permission is required to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedImageUri = result.assets[0].uri;
+        setProfileImageUri(selectedImageUri);
+        
+        // Upload to Supabase
+        if (user?.id) {
+          setIsUploading(true);
+          const uploadResult = await uploadProfileImage(user.id, selectedImageUri);
+          setIsUploading(false);
+          
+          if (uploadResult.success && uploadResult.data) {
+            setProfileImageUri(uploadResult.data);
+            Alert.alert('Success', 'Profile image uploaded successfully');
+
+            // Refresh profile data
+            const { success, data } = await getProfileById(user.id);
+            if (success && data !== undefined) {
+              setProfile(data);
+            }
+            // Refresh home screen profile image
+            refreshProfileImage?.();
+          } else {
+            Alert.alert('Upload Failed', uploadResult.error?.message || 'Failed to upload profile image');
+            console.error('Failed to upload profile image:', uploadResult.error);
+          }
+        }
+      }
+      setIsPhotoOptionsModalVisible(false);
+    } catch (error) {
+      setIsUploading(false);
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  const onGallery = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Gallery permission is required to select photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedImageUri = result.assets[0].uri;
+        setProfileImageUri(selectedImageUri);
+        
+        // Upload to Supabase
+        if (user?.id) {
+          setIsUploading(true);
+          const uploadResult = await uploadProfileImage(user.id, selectedImageUri);
+          setIsUploading(false);
+          
+          if (uploadResult.success && uploadResult.data) {
+            setProfileImageUri(uploadResult.data);
+            Alert.alert('Success', 'Profile image uploaded successfully');
+
+        // Refresh profile data
+        const { success, data } = await getProfileById(user.id);
+        if (success && data !== undefined) {
+          setProfile(data);
+        }
+            // Refresh home screen profile image
+            refreshProfileImage?.();
+          } else {
+            Alert.alert('Upload Failed', uploadResult.error?.message || 'Failed to upload profile image');
+            console.error('Failed to upload profile image:', uploadResult.error);
+          }
+        }
+      }
+      setIsPhotoOptionsModalVisible(false);
+    } catch (error) {
+      setIsUploading(false);
+      console.error('Error selecting photo:', error);
+      Alert.alert('Error', 'Failed to select photo. Please try again.');
+    }
+  };
+
+  const onRemove = async () => {
+    try {
+      setProfileImageUri(null);
+
+      // Update profile to remove image URL
+      if (user?.id) {
+        const { updateProfile } = await import('../../../lib/supabase/profileFunctions');
+        await updateProfile(user.id, { profile_image_url: null });
+
+        // Refresh profile data
+        const { success, data } = await getProfileById(user.id);
+        if (success && data) {
+          setProfile(data);
+        }
+
+        Alert.alert('Success', 'Profile image removed');
+        // Refresh home screen profile image
+        refreshProfileImage?.();
+      }
+      setIsPhotoOptionsModalVisible(false);
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      Alert.alert('Error', 'Failed to remove photo. Please try again.');
+    }
+  };
 
   const settingsItems = [
     {
@@ -91,6 +260,13 @@ export default function ProfileSettingsScreen() {
       id: 3,
       title: 'Account Information',
       icon: 'person' as const,
+      iconLibrary: 'Ionicons' as const,
+      hasSwitch: false,
+    },
+    {
+      id: 5,
+      title: 'Test Server Notification',
+      icon: 'notifications' as const,
       iconLibrary: 'Ionicons' as const,
       hasSwitch: false,
     },
@@ -117,17 +293,17 @@ export default function ProfileSettingsScreen() {
   };
 
   const getIconColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#ff4444'];
+    const colors = ['#000', '#000', '#000', '#000', '#ff4444'];
     return colors[index] || '#000';
   };
 
   const getIconBackground = (index: number) => {
-    const backgrounds = ['#f0f0f0', '#f0f0f0', '#f0f0f0', '#f0f0f0'];
+    const backgrounds = ['#f0f0f0', '#f0f0f0', '#f0f0f0', '#f0f0f0', '#f0f0f0'];
     return backgrounds[index] || '#f0f0f0';
   };
 
   const getTextColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#ff4444'];
+    const colors = ['#000', '#000', '#000', '#000', '#ff4444'];
     return colors[index] || '#000';
   };
 
@@ -143,20 +319,34 @@ export default function ProfileSettingsScreen() {
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
-            <View style={styles.profileLetterContainer}>
-              <FontAwesome6 name="user" size={40} color="white" />
-            </View>
+            {profileImageUri || profile?.profile_image_url ? (
+              <Image source={{ uri: profileImageUri || profile?.profile_image_url! }} style={styles.profileImage} />
+            ) : (
+              <View style={styles.profileLetterContainer}>
+                <FontAwesome6 name="user" size={40} color="white" />
+              </View>
+            )}
+            {isUploading && (
+              <View style={styles.uploadingOverlay}>
+                <Text style={styles.uploadingText}>Uploading...</Text>
+              </View>
+            )}
           </View>
           <Text style={styles.profileName}>{profile?.display_name || 'User'}</Text>
           <View style={styles.locationContainer}>
-            <Text style={styles.locationText}>{profile?.username || ''}</Text>
             <Text style={styles.locationText}>{profile?.email || ''}</Text>
           </View>
 
-          <TouchableOpacity style={styles.upgradeButton} onPress={() => setIsPhotoOptionsModalVisible(true)}>
-            <Text style={styles.upgradeButtonText}>Change Photo</Text>
+          <TouchableOpacity 
+            style={styles.upgradeButton} 
+            onPress={() => setIsPhotoOptionsModalVisible(true)}
+            disabled={isUploading}
+          >
+            <Text style={styles.upgradeButtonText}>
+              {isUploading ? 'Uploading...' : 'Change Photo'}
+            </Text>
           </TouchableOpacity>
-        </View> 
+        </View>
 
         {/* Settings Section */}
         <View style={styles.settingsSection}>
@@ -174,6 +364,8 @@ export default function ProfileSettingsScreen() {
                   setIsChangePasswordModalVisible(true);
                 } else if (item.id === 3) {
                   setIsAccountInfoModalVisible(true);
+                } else if (item.id === 5) {
+                  handleTestNotification();
                 } else if (item.id === 4) {
                   handleLogout();
                 }
@@ -216,27 +408,9 @@ export default function ProfileSettingsScreen() {
       <PhotoOptionsModal
         visible={isPhotoOptionsModalVisible}
         onClose={() => setIsPhotoOptionsModalVisible(false)}
-        onCamera={async () => {
-          if (hasPermission === null) {
-            console.log('Camera permission is null');
-            return;
-          }
-          if (hasPermission === false) {
-            console.log('Camera permission denied');
-            return;
-          }
-          console.log('Opening camera');
-          // Here you can navigate to a camera screen or open camera modal
-          setIsPhotoOptionsModalVisible(false);
-        }}
-        onGallery={() => {
-          console.log('Gallery selected');
-          setIsPhotoOptionsModalVisible(false);
-        }}
-        onRemove={() => {
-          console.log('Remove selected');
-          setIsPhotoOptionsModalVisible(false);
-        }}
+        onCamera={onCamera}
+        onGallery={onGallery}
+        onRemove={onRemove}
       />
     </SafeAreaView>
   );
@@ -275,6 +449,7 @@ const styles = StyleSheet.create({
   },
   profileImageContainer: {
     marginBottom: 20,
+    position: 'relative',
   },
   profileLetterContainer: {
     width: 80,
@@ -288,6 +463,27 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: 'white',
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadingText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
   },
   profileName: {
     fontSize: 24,

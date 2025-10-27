@@ -29,6 +29,14 @@ export async function getAppointmentsForUser() {
 
 export async function updateAppointmentStatus(appointmentId: string, status: string) {
   try {
+    // Validate status against allowed values
+    const allowedStatuses = ['On Going', 'Approved', 'Completed', 'Cancelled', 'No Show'];
+    if (!allowedStatuses.includes(status)) {
+      const error = new Error(`Invalid status: ${status}. Allowed values: ${allowedStatuses.join(', ')}`);
+      console.error('Status validation error:', error.message);
+      return { success: false, error };
+    }
+
     const { data, error } = await supabase
       .from('appointment_sched')
       .update({ status })

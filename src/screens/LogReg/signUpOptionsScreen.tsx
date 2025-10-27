@@ -1,8 +1,10 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RootStackParamList } from '../../types/navigations'
-import React from 'react'
+import { useGoogleAuth } from '../../hooks/useGoogleAuth'
+import NetInfo from '@react-native-community/netinfo'
+import React, { useState } from 'react'
 
 //icons
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -14,6 +16,42 @@ type LoginOptionsNavigationProp = NativeStackNavigationProp<RootStackParamList,
 
 export default function SignUpOptions() {
   const navigation = useNavigation<LoginOptionsNavigationProp>()
+  const { signInWithGoogle, loading: googleLoading } = useGoogleAuth()
+  const [networkError, setNetworkError] = useState('')
+
+  const handleGoogleSignUp = async () => {
+    setNetworkError('');
+
+    const netWorkState = await NetInfo.fetch();
+    if (!netWorkState.isConnected) {
+      Alert.alert('Network Error', 'No internet connection. Please check your network and try again.');
+      return;
+    }
+
+    try {
+      const result = await signInWithGoogle();
+
+      if (result.success && result.data?.user) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      } else {
+        if (result.error?.message) {
+          if (result.error.message.includes('cancelled')) {
+            return;
+          }
+          Alert.alert('Sign Up Error', result.error.message);
+        } else {
+          Alert.alert('Error', 'Google sign-up failed. Please try again.');
+        }
+      }
+    } catch (error: any) {
+      console.error('Google sign-up failed:', error);
+      Alert.alert('Error', 'Google sign-up failed. Please try again.');
+    }
+  };
+
   return (
     <View style={{flex: 1}}>
       <TouchableOpacity onPress={() => navigation.navigate('GetStarted')} style={styles.backBtn}>
@@ -27,9 +65,19 @@ export default function SignUpOptions() {
             <MaterialCommunityIcons name="email" size={24} color="white" style={{right: 58}} />
             <Text style={styles.emailText}>Sign up with Email</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.googleBtn, styles.buttonDisabled]} disabled={true}>
-            <Image source={require('../../../assets/icon/googleLogo.png')} style={{width: 24, height: 24, right: 50}} />
-            <Text style={styles.googleText}>Sign up with Google</Text>
+          <TouchableOpacity
+            style={[styles.googleBtn, googleLoading && styles.buttonDisabled]}
+            onPress={handleGoogleSignUp}
+            disabled={googleLoading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="black" style={{right: 50}} />
+            ) : (
+              <Image source={require('../../../assets/icon/googleLogo.png')} style={{width: 24, height: 24, right: 50}} />
+            )}
+            <Text style={styles.googleText}>
+              {googleLoading ? 'Signing up...' : 'Sign up with Google'}
+            </Text>
           </TouchableOpacity>
           <Text style={styles.signUpText}>
             Don't have an account?

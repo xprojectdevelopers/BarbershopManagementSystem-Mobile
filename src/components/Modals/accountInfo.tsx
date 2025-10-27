@@ -76,6 +76,14 @@ export default function AccountInfoModal({ visible, onClose }: AccountInfoModalP
 
   const handleSave = async () => {
     if (!user?.id || !profile) return;
+
+    // Check if email is being changed and OTP is required
+    const emailChanged = email !== profile.email;
+    if (emailChanged && (!otp || otp.trim() === '')) {
+      Alert.alert('Error', 'Please enter the OTP code to verify your new email address');
+      return;
+    }
+
     setSaving(true);
     try {
       const updates: Partial<CustomerProfile> = {

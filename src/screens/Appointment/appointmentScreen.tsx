@@ -14,7 +14,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigations';
-import { insertDropdownSelection } from '../../lib/supabase/insertFunctions';
+import { insertDropdownSelection, insertNotificationLoader } from '../../lib/supabase/insertFunctions';
+import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProfileById } from '../../lib/supabase/profileFunctions';
 import { getEmployeeById } from '../../lib/supabase/employeeFunctions';
@@ -177,6 +178,20 @@ export default function AppointmentScreen() {
       if (result.success) {
         const bookingTime = Date.now() - bookingStartTime;
         console.log(`✅ Appointment successfully inserted in ${bookingTime}ms!`);
+
+        // Insert notification into notification_loader
+        const notificationResult = await insertNotificationLoader(
+          'Appointment Booked',
+          `Your appointment has been successfully booked for ${formatDate(date)} at ${selectedTime}.`,
+          result.data?.[0]?.id ? result.data[0].id.toString() : undefined
+        );
+
+        if (notificationResult.success) {
+          console.log('✅ Notification inserted into notification_loader');
+        } else {
+          console.error('❌ Failed to insert notification:', notificationResult.error);
+        }
+
         setBookingStep('Appointment booked successfully!');
         setModalVisible(true);
       } else {
@@ -220,6 +235,20 @@ export default function AppointmentScreen() {
       if (result.success) {
         const bookingTime = Date.now() - bookingStartTime;
         console.log(`✅ Cash payment appointment booked in ${bookingTime}ms!`);
+
+        // Insert notification into notification_loader
+        const notificationResult = await insertNotificationLoader(
+          'Appointment Booked',
+          `Your appointment has been successfully booked for ${formatDate(date)} at ${selectedTime}.`,
+          result.data?.[0]?.id ? result.data[0].id.toString() : undefined
+        );
+
+        if (notificationResult.success) {
+          console.log('✅ Notification inserted into notification_loader');
+        } else {
+          console.error('❌ Failed to insert notification:', notificationResult.error);
+        }
+
         setBookingStep('Appointment booked successfully!');
         setModalVisible(true);
       } else {
@@ -380,23 +409,8 @@ export default function AppointmentScreen() {
       <AppointmentPayment
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onConfirm={async () => {
+        onConfirm={() => {
           setModalVisible(false);
-          
-          // Send notification asynchronously for faster response
-          console.log('📱 Sending appointment confirmation notification...');
-          
-          // Don't await - send notification in background
-          NotificationService.sendPushNotification(
-            'Appointment Booked',
-            'Your appointment has been successfully booked.',
-            { type: 'appointment_booked' }
-          ).then((result) => {
-            console.log('✅ Notification sent:', result.success ? 'Success' : 'Failed');
-          }).catch((error) => {
-            console.error('❌ Notification error:', error);
-          });
-          
           navigation.navigate('Home', { initialTab: 'Notification' });
         }}
       />

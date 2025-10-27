@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView } from 'react-native'
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Linking } from 'react-native'
 import React, { useState } from 'react'
 
 //icons
@@ -65,9 +65,6 @@ const formatPhoneNumber = (input: string) => {
           <View style={styles.contactSection}>
             <Text style={styles.label}>Contact Number</Text>
             <View style={styles.phoneInputContainer}>
-              <View style={styles.countryCodeContainer}>
-                <Text style={styles.countryCode}>+63</Text>
-              </View>
               <TextInput
                 placeholder='XXXXXXXXXXX'
                 placeholderTextColor={'#6b7280'}
@@ -96,7 +93,7 @@ const formatPhoneNumber = (input: string) => {
               />
               <View style={styles.termsTextContainer}>
                 <Text style={styles.termsText}>
-                  <TouchableOpacity><Text style={styles.linkText}>Molave Street Barbers</Text></TouchableOpacity> may send me personalized emails regarding products and services. (Optional)
+                  <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app')} ><Text style={styles.linkText}>Molave Street Barbers</Text></TouchableOpacity> may send me personalized emails regarding products and services. (Optional)
                 </Text>
               </View>
             </View>
@@ -104,11 +101,11 @@ const formatPhoneNumber = (input: string) => {
             <View>
               <Text style={styles.termsText}>
                 By clicking Create Account, you agree to the{' '}
-                <TouchableOpacity onPress={() => console.log('Terms pressed')}>
+                <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app/terms')}>
                   <Text style={styles.linkText}>Terms of Service</Text>
                 </TouchableOpacity>
                 {' '}and{' '}
-                <TouchableOpacity onPress={() => console.log('Privacy pressed')}>
+                <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app/privacy')}>
                   <Text style={styles.linkText}>Privacy Policy</Text>
                 </TouchableOpacity>
                 {' '}of Molave Street's Barbers.
@@ -166,26 +163,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  countryCodeContainer: {
-    backgroundColor: '#cacacaff',
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderRightWidth: 1,
-    borderRightColor: '#ebe8e8ff',
-    justifyContent: 'center',
-  },
-  countryCode: {
-    fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    color: '#1f2937',
-  },
+
   phoneInput: {
     flex: 1,
     backgroundColor: '#cacacaff',
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
+    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 15,
     fontFamily: 'Satoshi-Medium',

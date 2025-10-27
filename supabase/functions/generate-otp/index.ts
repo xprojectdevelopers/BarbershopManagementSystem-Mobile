@@ -16,23 +16,11 @@ serve(async (req: Request) => {
   }
 
   try {
-    // 1️⃣ Check Authorization
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    // Parse request body
+    const { email } = await req.json() as { email?: string };
 
-    const token = authHeader.replace("Bearer ", "");
-    if (!token) throw new Error("Invalid authorization token");
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) throw new Error("Unauthorized");
-
-    // 2️⃣ Parse request body
-    const { email, otp } = await req.json() as { email?: string; otp?: string };
-
-    if (!email || !otp) {
-      throw new Error("Missing email or OTP");
+    if (!email) {
+      throw new Error("Missing email");
     }
 
     // Validate email format
@@ -41,67 +29,57 @@ serve(async (req: Request) => {
       throw new Error("Invalid email format");
     }
 
-    // Validate OTP format (6 digits)
-    if (!/^\d{6}$/.test(otp)) {
-      throw new Error("Invalid OTP format");
-    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 3️⃣ Check if user exists and is the current authenticated user
-    const { data: existingUser, error: userError } = await supabase
-      .from("customer_profiles")
-      .select("email")
-      .eq("id", user.id)
-      .single();
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    if (userError || !existingUser) {
-      throw new Error("User profile not found");
-    }
+    // Set expiration time (2 minutes from now)
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString();
 
-    // Get OTP from database
-    const { data: otpRecord, error: fetchError } = await supabase
-      .from("forgot_password_otps")
-      .select("otp, expires_at")
-      .eq("email", email.toLowerCase())
-      .single();
-
-    if (fetchError || !otpRecord) {
-      throw new Error("OTP not found or has expired");
-    }
-
-    // Check if OTP has expired
-    const now = new Date();
-    const expiresAt = new Date(otpRecord.expires_at);
-    
-    if (now > expiresAt) {
-      // Delete expired OTP
-      await supabase
-        .from("forgot_password_otps")
-        .delete()
-        .eq("email", email.toLowerCase());
-      
-      throw new Error("OTP has expired");
-    }
-
-    // Verify OTP matches
-    if (otpRecord.otp !== otp) {
-      throw new Error("Invalid OTP");
-    }
-
-    // Delete the OTP after successful verification
-    const { error: deleteError } = await supabase
-      .from("forgot_password_otps")
+    // Delete any existing OTP for this email
+    await supabase
+      .from("email_verify_otps")
       .delete()
       .eq("email", email.toLowerCase());
 
-    if (deleteError) {
-      throw new Error("Failed to delete OTP after verification");
+    // Insert new OTP
+    const { error: insertError } = await supabase
+      .from("email_verify_otps")
+      .insert({
+        email: email.toLowerCase(),
+        otp,
+        expires_at: expiresAt
+      });
+
+    if (insertError) {
+      throw new Error("Failed to store OTP");
     }
 
-    // OTP is valid
+    // Send email with OTP
+    const emailResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-otp-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: email,
+        otp,
+        displayName: "User", // Default display name since this is for forgot password
+      }),
+    });
+
+    if (!emailResponse.ok) {
+      const errorText = await emailResponse.text();
+      console.error("Email send failed:", errorText);
+      throw new Error("Failed to send email");
+    }
+
+    // ✅ OTP generated and sent
     return new Response(
       JSON.stringify({
         success: true,
-        message: "OTP verified successfully"
+        message: "OTP sent successfully"
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

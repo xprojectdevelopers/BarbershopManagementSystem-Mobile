@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Modal, View, StyleSheet, Text, TouchableOpacity, Image} from 'react-native';
 
 interface AppointmentAlertProps {
   visible: boolean;
@@ -19,6 +19,10 @@ export default function AppointmentAlert({ visible, onClose, onConfirm }: Appoin
         <View style={styles.modalContent}>
           <View style={styles.modalBoxContainer}>
             <Text style={styles.modalBoxTitle}>TAKE NOTE</Text>
+            <Image 
+              source={require('../../../assets/icon/animation/Reminder.gif')}
+              style={{ width: 140, height: 140, alignSelf: 'center', marginTop: 10 }}
+            />
             <Text style={styles.modalBoxText}>All bookings go through approval. We'll notify you once confirmed.</Text> 
             <TouchableOpacity onPress={() => { onConfirm(); onClose(); }} style={styles.modalBoxBtn}>
               <Text style={styles.modalBoxBtnText}>Continue</Text>
@@ -40,15 +44,17 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: 'white',
     width: 350,
-    height: 300,
+    height: 500,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 30,
   },
   modalBoxContainer: {
     borderWidth: 1,
     borderColor: 'black',
     width: '80%',
-    height: '80%',
+    height: '85%',
+    borderRadius: 30,
   },
   modalBoxTitle: {
     fontSize: 26,
@@ -72,7 +78,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 30,
     position: 'absolute',
-    bottom: 20,
+    bottom: 50,
     alignSelf: 'center',
   },
   modalBoxBtnText: {

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   BackHandler,
+  Linking
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -14,6 +15,8 @@ import { RootStackParamList } from '../../types/navigations';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { getProfileById } from '../../lib/supabase/profileFunctions';
+import MonthlyAnnouncement from '../../components/Carousel/monthlyAnnouncement';
 
 // Components
 import BottomTab from '../../components/bottomTab';
@@ -31,6 +34,7 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
+  const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const { user } = useAuth();
@@ -41,6 +45,18 @@ export default function HomeScreen() {
       setActiveTab(route.params.initialTab);
     }
   }, [route.params?.initialTab]);
+
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      if (user?.id) {
+        const profileResult = await getProfileById(user.id);
+        if (profileResult.success && profileResult.data?.profile_image_url) {
+          setProfileImageUri(profileResult.data.profile_image_url);
+        }
+      }
+    };
+    fetchProfileImage();
+  }, [user]);
 
   useEffect(() => {
     const backAction = () => {
@@ -69,9 +85,18 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Profile Icon */}
-      <View style={styles.profile}>
-        <FontAwesome6 name="user" size={20} color="white" />
+     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+       <TouchableOpacity onPress={() => setActiveTab('Profile')} style={styles.profile}>
+        {profileImageUri ? (
+          <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
+        ) : (
+          <FontAwesome6 name="user" size={20} color="white" />
+        )}
+      </TouchableOpacity>
+      <View style={styles.badges}>
+        <Text style={{color: 'white', fontFamily: 'Satoshi-Bold', fontSize: 16 }}>Molave Street Legends</Text>
       </View>
+     </View>
 
       {/* Title */}
       <Text style={styles.title}>Get started with StreetCut</Text>
@@ -104,7 +129,7 @@ export default function HomeScreen() {
             <Text style={styles.StreetCutText2}>Hair Contents for You</Text>
         </View>
          <View style={styles.StreetCutContext3}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app/about')}>
             <Image 
               source={require('../../../assets/img/Get Started with StreetCut/img3.jpg')}
               style={styles.StreetCutImage2}
@@ -114,7 +139,7 @@ export default function HomeScreen() {
             <Text style={styles.StreetCutText3}>Discover Our Unique Story</Text>
         </View>
          <View style={styles.StreetCutContext4}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app/about')}>
             <Image 
               source={require('../../../assets/img/Get Started with StreetCut/img4.jpg')}
               style={styles.StreetCutImage3}
@@ -127,6 +152,8 @@ export default function HomeScreen() {
     <Text style={styles.haircutInspirations}>Haircut Inspirations</Text>
     <HaircutInspiration />
     <SocialMedia />
+    <Text style={styles.monthlyInspirations}>Monthly Announcements</Text>
+    <MonthlyAnnouncement />
     </ScrollView>
   );
 
@@ -140,13 +167,24 @@ export default function HomeScreen() {
     </ScrollView>
   );
 
+  const fetchProfileImage = async () => {
+    if (user?.id) {
+      const profileResult = await getProfileById(user.id);
+      if (profileResult.success && profileResult.data?.profile_image_url) {
+        setProfileImageUri(profileResult.data.profile_image_url);
+      } else {
+        setProfileImageUri(null);
+      }
+    }
+  };
+
   const renderProfileContent = () => (
     <ScrollView
       style={styles.scrollView}
       contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
       showsVerticalScrollIndicator={false}
     >
-      <Profile />
+      <Profile refreshProfileImage={fetchProfileImage} />
     </ScrollView>
   );
 
@@ -202,10 +240,25 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     marginTop: 60,
   },
+  profileImage: {
+    width: 45,
+    height: 45,
+    borderRadius: 25,
+  },
   profileText: {
     fontSize: 30,
     fontFamily: 'Satoshi-Bold',
     color: 'white',
+  },
+  badges: {
+    backgroundColor: '#000000ff',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginLeft: 20,
+    marginTop: 65,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 24,
@@ -341,5 +394,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     bottom: 90,
     left: 15,
-  }
+  },
+  monthlyInspirations: {
+    fontSize: 24,
+    fontFamily: 'Satoshi-Bold',
+    marginTop: 50,
+    left: 15,
+  },
 });

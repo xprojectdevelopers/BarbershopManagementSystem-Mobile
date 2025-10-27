@@ -167,3 +167,43 @@ export async function insertNotification(header: string, description: string, st
     return { success: false, error: err };
   }
 }
+
+// Insert notification loader
+export async function insertNotificationLoader(title: string, description?: string, receipt_id?: string) {
+  try {
+    // Get the current authenticated user
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.error('No authenticated user found');
+      return { success: false, error: 'No authenticated user' };
+    }
+
+    const { data, error } = await supabase
+      .from('notification_loader')
+      .insert([
+        {
+          user_id: user.id,
+          title,
+          description,
+          receipt_id,
+        },
+      ]);
+
+    if (error) {
+      console.error('Error inserting notification loader:', error);
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error inserting notification loader:', err);
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
+    return { success: false, error: err };
+  }
+}
