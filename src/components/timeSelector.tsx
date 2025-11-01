@@ -1,9 +1,9 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
-import React, { useState, useEffect } from 'react'
+import { StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native'; // Import Dimensions
+import React, { useState, useEffect } from 'react';
 
 interface TimeSlot {
-  id: number
-  time: string
+  id: number;
+  time: string;
 }
 
 const timeSlots: TimeSlot[] = [
@@ -19,48 +19,63 @@ const timeSlots: TimeSlot[] = [
   { id: 10, time: '6:30 pm' },
   { id: 11, time: '7:00 pm' },
   { id: 12, time: '7:30 pm' },
-]
+];
 
 interface TimeSelectorProps {
   onTimeSelect?: (time: string) => void;
   disabledTimes?: string[];
 }
 
+// Get screen width for responsive calculations
+const { width } = Dimensions.get('window');
+
+// Define the number of columns and spacing
+const numColumns = 3;
+const horizontalPadding = 10; // Padding from the edges of the parent wrapper
+const buttonMargin = 10; // Space between buttons
+
 export default function TimeSelector({ onTimeSelect, disabledTimes = [] }: TimeSelectorProps) {
-  const [selectedTime, setSelectedTime] = useState<number | null>(null)
+  const [selectedTime, setSelectedTime] = useState<number | null>(null);
 
   const handleTimeSelection = (timeSlot: TimeSlot) => {
-    // Don't allow selection if time is disabled
     if (disabledTimes.includes(timeSlot.time)) {
       return;
     }
 
-    const newSelected = timeSlot.id === selectedTime ? null : timeSlot.id
-    setSelectedTime(newSelected)
+    const newSelected = timeSlot.id === selectedTime ? null : timeSlot.id;
+    setSelectedTime(newSelected);
     if (onTimeSelect && newSelected) {
-      onTimeSelect(timeSlot.time)
+      onTimeSelect(timeSlot.time);
+    } else if (onTimeSelect && newSelected === null) { // Allow deselection to trigger null
+        onTimeSelect(''); // Or pass null, depending on desired behavior
     }
-  }
+  };
 
   const getButtonStyle = (timeSlot: TimeSlot) => {
+    // Calculate button width dynamically
+    // The parent (inputWrapper) is 90% of screen width.
+    // So, we take 90% of screen width, subtract total padding and margins, then divide by numColumns.
+    const availableWidth = width * 0.9 - (horizontalPadding * 2) - (buttonMargin * (numColumns - 1));
+    const buttonWidth = availableWidth / numColumns;
+
     if (disabledTimes.includes(timeSlot.time)) {
-      return styles.selectorDisabled
+      return { ...styles.selectorBase, ...styles.selectorDisabled, width: buttonWidth };
     }
     if (selectedTime === timeSlot.id) {
-      return styles.selectorActive
+      return { ...styles.selectorBase, ...styles.selectorActive, width: buttonWidth };
     }
-    return styles.selector
-  }
+    return { ...styles.selectorBase, ...styles.selector, width: buttonWidth };
+  };
 
   const getTextStyle = (timeSlot: TimeSlot) => {
     if (disabledTimes.includes(timeSlot.time)) {
-      return styles.selectorDisabledText
+      return styles.selectorDisabledText;
     }
     if (selectedTime === timeSlot.id) {
-      return styles.selectorActiveText
+      return styles.selectorActiveText;
     }
-    return styles.selectorText
-  }
+    return styles.selectorText;
+  };
 
   return (
     <View style={styles.container}>
@@ -79,63 +94,54 @@ export default function TimeSelector({ onTimeSelect, disabledTimes = [] }: TimeS
         ))}
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    left: 40,
-    top: 20
+    // Removed fixed 'left: 40' and 'top: 20'.
+    // The parent <View style={styles.inputWrapper}> in AppointmentScreen will handle alignment.
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between', // Distribute items evenly
+    paddingHorizontal: horizontalPadding, // Add padding inside the grid
+  },
+  selectorBase: { // Common styles for all selectors
+    height: 40,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: buttonMargin, // Margin for vertical spacing
+    borderRadius: 5, // Added a slight border radius for aesthetics
   },
   selectorActive: {
-    width: 100,
-    height: 40,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: 'black',
-    marginRight: 10,
-    marginBottom: 10,
+    borderColor: 'black', // Ensure border color matches background
   },
   selectorActiveText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Satoshi-Bold',
-    color: 'white'
+    color: 'white',
   },
   selector: {
-    width: 100,
-    height: 40,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: 'white',
-    marginRight: 10,
-    marginBottom: 10,
+    borderColor: '#b1b1b1', // Use a consistent border color
   },
   selectorText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Satoshi-Bold',
-    color: 'black'
+    color: 'black',
   },
   selectorDisabled: {
-    width: 100,
-    height: 40,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#f0f0f0',
-    marginRight: 10,
-    marginBottom: 10,
+    borderColor: '#e0e0e0', // Lighter border for disabled
   },
   selectorDisabledText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Satoshi-Bold',
-    color: '#999'
-  }
-})
+    color: '#999',
+  },
+});

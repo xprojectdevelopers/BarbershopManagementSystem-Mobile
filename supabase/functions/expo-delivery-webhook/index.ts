@@ -68,28 +68,6 @@ Deno.serve(async (req) => {
 
     const receiptId = ticket.id;
 
-    // Store initial send log asynchronously to avoid blocking
-    const sent_at = new Date().toISOString();
-    (async () => {
-      try {
-        const { error } = await supabase.from("notification_logs").insert({
-          expo_receipt_id: receiptId,
-          status: ticket.status === "ok" ? "sent" : "error",
-          device_token: token,
-          message: body,
-          details: ticket,
-          sent_at,
-        });
-        if (error) {
-          console.error("❌ Database log error:", error);
-        } else {
-          console.log("💾 Database log saved asynchronously");
-        }
-      } catch (err) {
-        console.error("❌ Database log error:", err);
-      }
-    })();
-
     if (ticket.status === "error") {
       return new Response(
         JSON.stringify({
@@ -114,8 +92,7 @@ Deno.serve(async (req) => {
         receiptId,
         message: "Push notification sent successfully",
         timing: {
-          totalTime: totalTime + "ms",
-          sentAt: sent_at
+          totalTime: totalTime + "ms"
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

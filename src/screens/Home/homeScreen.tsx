@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   BackHandler,
-  Linking
+  Linking,
+  Dimensions
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -16,6 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { getProfileById } from '../../lib/supabase/profileFunctions';
+import { getUserBadge } from '../../lib/supabase/badgeFunctions';
 import MonthlyAnnouncement from '../../components/Carousel/monthlyAnnouncement';
 
 // Components
@@ -32,9 +34,22 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
   'Home'
 >;
 
+// Get device dimensions
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Responsive scaling functions
+const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
+const verticalScale = (size: number) => (SCREEN_HEIGHT / 812) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Responsive dimensions
+const CARD_WIDTH = SCREEN_WIDTH * 0.8;
+const CARD_HEIGHT = CARD_WIDTH * 1.17; // Maintain aspect ratio
+
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
+  const [userBadge, setUserBadge] = useState<string>('None');
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const { user } = useAuth();
@@ -56,6 +71,20 @@ export default function HomeScreen() {
       }
     };
     fetchProfileImage();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchUserBadge = async () => {
+      if (user?.id) {
+        const badgeResult = await getUserBadge(user.id);
+        if (badgeResult.success && badgeResult.data?.badge_name) {
+          setUserBadge(badgeResult.data.badge_name);
+        } else {
+          setUserBadge('None');
+        }
+      }
+    };
+    fetchUserBadge();
   }, [user]);
 
   useEffect(() => {
@@ -81,86 +110,92 @@ export default function HomeScreen() {
   const renderHomeContent = () => (
     <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: verticalScale(120) + insets.bottom }]}
       showsVerticalScrollIndicator={false}
     >
       {/* Profile Icon */}
-     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-       <TouchableOpacity onPress={() => setActiveTab('Profile')} style={styles.profile}>
-        {profileImageUri ? (
-          <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
-        ) : (
-          <FontAwesome6 name="user" size={20} color="white" />
+      <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={() => setActiveTab('Profile')} style={styles.profile}>
+          {profileImageUri ? (
+            <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
+          ) : (
+            <FontAwesome6 name="user" size={moderateScale(20)} color="white" />
+          )}
+        </TouchableOpacity>
+        {(userBadge === 'Rookie' || userBadge === 'Loyal Customer' || userBadge === 'Molave Street Legend') && (
+          <View style={styles.badges}>
+            <Text style={styles.badgeText}>{userBadge}</Text>
+          </View>
         )}
-      </TouchableOpacity>
-      <View style={styles.badges}>
-        <Text style={{color: 'white', fontFamily: 'Satoshi-Bold', fontSize: 16 }}>Molave Street Legends</Text>
       </View>
-     </View>
 
       {/* Title */}
       <Text style={styles.title}>Get started with StreetCut</Text>
 
       {/* Image & Book Button */}
-      <ScrollView 
-        style={styles.scrollContainer} 
-        showsHorizontalScrollIndicator={false} 
-        horizontal={true} 
+      <ScrollView
+        style={styles.scrollContainer}
+        showsHorizontalScrollIndicator={false}
+        horizontal={true}
         contentContainerStyle={styles.scrollContainerContent}
-        >
-        <View style={styles.StreetCutContext1}>
+      >
+        <View style={styles.streetCutContext}>
           <TouchableOpacity onPress={() => navigation.navigate('Appointment')}>
             <Image
               source={require('../../../assets/img/Get Started with StreetCut/img1.jpg')}
-              style={styles.StreetCutImage1}
+              style={styles.streetCutImage}
             />
           </TouchableOpacity>
-            <Text style={styles.StreetCutTitle1}>Book an Appointment</Text>
-            <Text style={styles.StreetCutText1}>Your Chair is Waiting for You</Text>
+          <Text style={styles.streetCutTitle}>Book an Appointment</Text>
+          <Text style={styles.streetCutText}>Your Chair is Waiting for You</Text>
         </View>
-         <View style={styles.StreetCutContext2}>
+        
+        <View style={styles.streetCutContext}>
           <TouchableOpacity onPress={() => navigation.navigate('HairContent')}>
-            <Image 
+            <Image
               source={require('../../../assets/img/Get Started with StreetCut/img2.jpg')}
-              style={styles.StreetCutImage2}
+              style={styles.streetCutImage}
             />
           </TouchableOpacity>
-            <Text style={styles.StreetCutTitle2}>Learn More</Text>
-            <Text style={styles.StreetCutText2}>Hair Contents for You</Text>
+          <Text style={styles.streetCutTitle}>Learn More</Text>
+          <Text style={styles.streetCutText}>Hair Contents for You</Text>
         </View>
-         <View style={styles.StreetCutContext3}>
+        
+        <View style={styles.streetCutContext}>
           <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app/about')}>
-            <Image 
+            <Image
               source={require('../../../assets/img/Get Started with StreetCut/img3.jpg')}
-              style={styles.StreetCutImage2}
+              style={styles.streetCutImage}
             />
           </TouchableOpacity>
-            <Text style={styles.StreetCutTitle3}>See More</Text>
-            <Text style={styles.StreetCutText3}>Discover Our Unique Story</Text>
+          <Text style={styles.streetCutTitle}>See More</Text>
+          <Text style={styles.streetCutText}>Discover Our Unique Story</Text>
         </View>
-         <View style={styles.StreetCutContext4}>
+        
+        <View style={styles.streetCutContext}>
           <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app/about')}>
-            <Image 
+            <Image
               source={require('../../../assets/img/Get Started with StreetCut/img4.jpg')}
-              style={styles.StreetCutImage3}
+              style={styles.streetCutImage}
             />
           </TouchableOpacity>
-            <Text style={styles.StreetCutTitle4}>Click Now</Text>
-            <Text style={styles.StreetCutText4}>Know your Favorite Barber</Text>
+          <Text style={styles.streetCutTitle}>Click Now</Text>
+          <Text style={styles.streetCutText}>Know your Favorite Barber</Text>
         </View>
       </ScrollView>
-    <Text style={styles.haircutInspirations}>Haircut Inspirations</Text>
-    <HaircutInspiration />
-    <SocialMedia />
-    <Text style={styles.monthlyInspirations}>Monthly Announcements</Text>
-    <MonthlyAnnouncement />
+
+      <Text style={styles.sectionTitle}>Haircut Inspirations</Text>
+      <HaircutInspiration />
+      <SocialMedia />
+      <Text style={styles.sectionTitle}>Monthly Announcements</Text>
+      <MonthlyAnnouncement />
     </ScrollView>
   );
 
   const renderNotificationContent = () => (
     <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+      contentContainerStyle={{ paddingBottom: verticalScale(120) + insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
       <Notification />
@@ -181,7 +216,7 @@ export default function HomeScreen() {
   const renderProfileContent = () => (
     <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+      contentContainerStyle={{ paddingBottom: verticalScale(120) + insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
       <Profile refreshProfileImage={fetchProfileImage} />
@@ -227,118 +262,91 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
     paddingHorizontal: 0,
   },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: scale(15),
+    marginTop: verticalScale(60),
+  },
   profile: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
+    width: moderateScale(45),
+    height: moderateScale(45),
+    borderRadius: moderateScale(22.5),
     backgroundColor: 'black',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 15,
-    marginTop: 60,
   },
   profileImage: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-  },
-  profileText: {
-    fontSize: 30,
-    fontFamily: 'Satoshi-Bold',
-    color: 'white',
+    width: moderateScale(45),
+    height: moderateScale(45),
+    borderRadius: moderateScale(22.5),
   },
   badges: {
     backgroundColor: '#000000ff',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginLeft: 20,
-    marginTop: 65,
+    borderRadius: moderateScale(20),
+    paddingVertical: verticalScale(6),
+    paddingHorizontal: scale(10),
+    marginLeft: scale(20),
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
+    maxWidth: SCREEN_WIDTH * 0.55,
+  },
+  badgeText: {
+    color: 'white',
+    fontFamily: 'Satoshi-Bold',
+    fontSize: moderateScale(17),
   },
   title: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontFamily: 'Satoshi-Bold',
-    marginLeft: 15,
-    marginTop: 30,
-    marginBottom: 30,
+    marginLeft: scale(15),
+    marginTop: verticalScale(30),
+    marginBottom: verticalScale(30),
   },
   scrollContainer: {
-    height: 560,
-    bottom: 90
+    marginBottom: verticalScale(30),
   },
   scrollContainerContent: {
     alignItems: 'center',
-    paddingLeft: 20,
-    paddingRight: 20,
+    paddingLeft: scale(15),
+    paddingRight: scale(15),
   },
-  StreetCutContext1: {
-    alignItems: 'center',
-    marginRight: 10,
+  streetCutContext: {
+    alignItems: 'flex-start',
+    marginRight: scale(15),
+    width: CARD_WIDTH,
   },
-  StreetCutImage1: {
-    width: 300,
-    height: 350,
-    borderRadius: 10,
-    marginBottom: 10,
+  streetCutImage: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: moderateScale(10),
+    marginBottom: verticalScale(10),
   },
-  StreetCutContext2: {
-    alignItems: 'center',
-    marginRight: 10,
-  },
-   StreetCutContext3: {
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  StreetCutContext4: {
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  StreetCutImage2: {
-    width: 300,
-    height: 350,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  StreetCutImage3: {
-    width: 300,
-    height: 350,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  image1: {
-    width: 380,
-    height: 380,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  bookBtn: {
-    backgroundColor: 'black',
-    padding: 10,
-    borderRadius: 30,
-    width: 150,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    bottom: 110,
-  },
-  bookBtnText: {
-    fontSize: 16,
-    color: 'white',
-    textAlign: 'center',
+  streetCutTitle: {
+    fontSize: moderateScale(14),
     fontFamily: 'Satoshi-Bold',
+    marginBottom: verticalScale(4),
+  },
+  streetCutText: {
+    fontSize: moderateScale(19),
+    fontFamily: 'Satoshi-Bold',
+  },
+  sectionTitle: {
+    fontSize: moderateScale(24),
+    fontFamily: 'Satoshi-Bold',
+    marginTop: verticalScale(20),
+    marginBottom: verticalScale(15),
+    paddingHorizontal: scale(15),
   },
   bottomTabContainer: {
     position: 'absolute',
-    top: 760,
     left: 0,
     right: 0,
     zIndex: 1000,
-    minHeight: 80,
+    minHeight: verticalScale(80),
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: {
@@ -348,57 +356,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 5,
-  },
-  StreetCutTitle1: {
-    fontSize: 14,
-    fontFamily: 'Satoshi-Bold',
-    right: 80,
-  },
-  StreetCutText1: {
-    fontSize: 19,
-    fontFamily: 'Satoshi-Bold',
-    right: 25,
-  },
-  StreetCutTitle2: {
-    fontSize: 14,
-    fontFamily: 'Satoshi-Bold',
-    right: 115,
-  },
-  StreetCutText2: {
-    fontSize: 19,
-    fontFamily: 'Satoshi-Bold',
-    right: 56,
-  },
-  StreetCutTitle3: {
-    fontSize: 14,
-    fontFamily: 'Satoshi-Bold',
-    right: 120,
-  },
-  StreetCutText3: {
-    fontSize: 19,
-    fontFamily: 'Satoshi-Bold',
-    right: 33,
-  },
-  StreetCutTitle4: {
-    fontSize: 14,
-    fontFamily: 'Satoshi-Bold',
-    right: 110,
-  },
-  StreetCutText4: {
-    fontSize: 19,
-    fontFamily: 'Satoshi-Bold',
-    right: 25,
-  },
-  haircutInspirations: {
-    fontSize: 24,
-    fontFamily: 'Satoshi-Bold',
-    bottom: 90,
-    left: 15,
-  },
-  monthlyInspirations: {
-    fontSize: 24,
-    fontFamily: 'Satoshi-Bold',
-    marginTop: 50,
-    left: 15,
   },
 });

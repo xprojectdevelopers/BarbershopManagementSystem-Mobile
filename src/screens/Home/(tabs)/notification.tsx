@@ -7,7 +7,6 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 
 // supabase
-import { getAppointmentsForUser, updateAppointmentStatus } from '../../../lib/supabase/appointmentFunctions';
 import { supabase } from '../../../lib/supabase/client';
 
 // auth
@@ -137,8 +136,16 @@ export default function Notification() {
   useEffect(() => {
     if (user) {
       const fetchAppointments = async () => {
-        const { success, data } = await getAppointmentsForUser();
-        if (success) {
+        // Fetch appointments directly from Supabase
+        const { data, error } = await supabase
+          .from('appointment_sched')
+          .select('*')
+          .eq('customer_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching appointments:', error);
+        } else {
           setAppointments(data || []);
         }
       };
@@ -357,8 +364,12 @@ export default function Notification() {
     }
 
     console.log('Cancelling appointment...');
-    const { success, error } = await updateAppointmentStatus(selectedAppointment.id!, 'Cancelled');
-    if (success) {
+    const { error } = await supabase
+      .from('appointment_sched')
+      .update({ status: 'Cancelled' })
+      .eq('id', selectedAppointment.id);
+
+    if (!error) {
       console.log('Appointment cancelled successfully');
 
       // Send cancellation notification using context
@@ -378,9 +389,16 @@ export default function Notification() {
       }
 
       // Refetch appointments to update the list
-      const { success: fetchSuccess, data } = await getAppointmentsForUser();
-      if (fetchSuccess) {
-        setAppointments(data || []);
+      const { data: refetchData, error: refetchError } = await supabase
+        .from('appointment_sched')
+        .select('*')
+        .eq('customer_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (refetchError) {
+        console.error('Error refetching appointments:', refetchError);
+      } else {
+        setAppointments(refetchData || []);
       }
       // Update selected appointment status
       setSelectedAppointment({ ...selectedAppointment, status: 'Cancelled' });

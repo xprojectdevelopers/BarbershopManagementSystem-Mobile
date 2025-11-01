@@ -23,7 +23,7 @@ export const useGoogleAuth = () => {
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
-          skipBrowserRedirect: true,
+          skipBrowserRedirect: false,
         },
       });
 
@@ -64,12 +64,30 @@ export const useGoogleAuth = () => {
         let refresh_token = hashParams.get('refresh_token') || queryParams.get('refresh_token');
 
         if (access_token && refresh_token) {
-          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
+          // Retry logic for setSession to handle AuthRetryableFetchError
+          let sessionData, sessionError;
+          const maxRetries = 3;
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            const result = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            sessionData = result.data;
+            sessionError = result.error;
+
+            if (!sessionError || !sessionError.message.includes('AuthRetryableFetchError')) {
+              break;
+            }
+
+            if (attempt < maxRetries) {
+              console.warn(`setSession attempt ${attempt} failed with AuthRetryableFetchError, retrying...`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+            }
+          }
 
           if (sessionError) throw sessionError;
+
+          if (!sessionData) throw new Error('Session data is undefined');
 
           const user = sessionData.session?.user;
           if (user) {

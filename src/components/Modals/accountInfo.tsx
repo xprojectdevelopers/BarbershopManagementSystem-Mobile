@@ -10,8 +10,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { getProfileById, updateProfile, sendOTP } from '../../lib/supabase/profileFunctions';
-import { CustomerProfile } from '../../lib/supabase/profileFunctions';
+import { getProfileById, updateProfile, sendOTP , CustomerProfile } from '../../lib/supabase/profileFunctions';
+
 
 interface AccountInfoModalProps {
   visible: boolean;

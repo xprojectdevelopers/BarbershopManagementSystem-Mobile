@@ -12,4 +12,5 @@ export type RootStackParamList = {
   SplashScreen: undefined;
   About: undefined;
   HairContent: undefined;
+  UserList: undefined;
 };

@@ -20,7 +20,7 @@ export default function AppointmentPayment({ visible, onClose, onConfirm }: Appo
           <View style={styles.modalBoxContainer}>
             <Image source={require('../../../assets/icon/animation/Success Check.gif')} style={styles.video} />
             <Text style={styles.modalBoxTitle}>THANK YOU!</Text>
-            <Text style={styles.modalBoxText}>Your booking has been submitted. You'll be notified onced confirmed.</Text>
+            <Text style={styles.modalBoxText}>Your booking has been submitted. You&apos;ll be notified once confirmed.</Text>
             <TouchableOpacity onPress={() => { onConfirm(); onClose(); }} style={styles.modalBoxBtn}>
                 <Text style={styles.modalBoxBtnText}>Go to Home</Text>
             </TouchableOpacity>

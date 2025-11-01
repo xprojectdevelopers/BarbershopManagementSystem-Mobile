@@ -23,7 +23,7 @@ export default function AppointmentAlert({ visible, onClose, onConfirm }: Appoin
               source={require('../../../assets/icon/animation/Reminder.gif')}
               style={{ width: 140, height: 140, alignSelf: 'center', marginTop: 10 }}
             />
-            <Text style={styles.modalBoxText}>All bookings go through approval. We'll notify you once confirmed.</Text> 
+            <Text style={styles.modalBoxText}>All bookings go through approval. We&apos;ll notify you once confirmed.</Text>
             <TouchableOpacity onPress={() => { onConfirm(); onClose(); }} style={styles.modalBoxBtn}>
               <Text style={styles.modalBoxBtnText}>Continue</Text>
             </TouchableOpacity>

@@ -8,7 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import { NotificationProvider } from "./src/contexts/notificationContext";
 import { RootStackParamList } from "./src/types/navigations";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./src/lib/supabase/client";
 
 // Screens
 import GetStarted from "./src/screens/startApp/getStarted";
@@ -21,13 +21,9 @@ import Appointment from "./src/screens/Appointment/appointmentScreen";
 import SplashScreen from "./src/screens/startApp/splashScreen";
 import About from './src/screens/profiles/about'
 import HairContent from './src/screens/Home/hairContent'
+import UserList from './src/screens/Home/userListScreen'
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-const supabase = createClient(
-  "https://YOUR_SUPABASE_URL",
-  "YOUR_SUPABASE_ANON_KEY"
-);
 
 // ✅ Notification handler — always show instantly
 Notifications.setNotificationHandler({
@@ -54,18 +50,6 @@ export default function App() {
         const receivedAt = new Date().toISOString();
         console.log("📬 Notification received at:", receivedAt);
         console.log("📦 Payload:", notification.request.content.data);
-
-        // ✅ Send confirmation back to Supabase
-        const { error } = await supabase
-          .from("notification_logs")
-          .update({
-            status: "delivered",
-            delivered_at: receivedAt,
-          })
-          .eq("device_token", notification.request.identifier);
-
-        if (error) console.error("❌ Error updating delivery:", error);
-        else console.log("✅ Delivery confirmed instantly in Supabase");
       }
     );
 
@@ -92,6 +76,7 @@ export default function App() {
             <Stack.Screen name="Appointment" component={Appointment} />
             <Stack.Screen name="About" component={About} />
             <Stack.Screen name="HairContent" component={HairContent} />
+            <Stack.Screen name="UserList" component={UserList} />
           </Stack.Navigator>
         </NavigationContainer>
       </NotificationProvider>

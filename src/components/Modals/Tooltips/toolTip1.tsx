@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 16,
     fontFamily: 'Satoshi-Regular',
-    color: '#666',
+    color: 'black',
     lineHeight: 22,
   },
 });

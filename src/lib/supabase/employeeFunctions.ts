@@ -2,9 +2,10 @@ import { supabase } from './client';
 
 export interface Employee {
   id: string;
-  full_name: string;
+  Full_Name: string;
+  Employee_Role: string;
   expertise: string;
-  work_sched: string[]; // Assuming it's an array of days, e.g., ['Monday', 'Tuesday']
+  work_sched: string[];
   photo: string;
 }
 

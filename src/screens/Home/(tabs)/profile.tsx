@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../types/navigations';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getProfileById, CustomerProfile, uploadProfileImage } from '../../../lib/supabase/profileFunctions';
-import { useEffect } from 'react';
+
 import ChangePasswordModal from '../../../components/Modals/changePassword';
 import AccountInfoModal from '../../../components/Modals/accountInfo';
 import PhotoOptionsModal from '../../../components/Modals/photoOptions';
@@ -76,42 +76,6 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
       });
     } catch (error) {
       console.error('Logout error:', error);
-    }
-  };
-
-  const handleTestNotification = async () => {
-    const startTime = Date.now();
-    console.log('🚀 Starting test notification at:', new Date().toISOString());
-
-    try {
-      console.log('📱 Requesting push token...');
-      const tokenStart = Date.now();
-      const { registerForPushNotificationsAsync } = await import('../../../utils/registerForPushNotificationAsync');
-      const token = await registerForPushNotificationsAsync();
-      const tokenTime = Date.now() - tokenStart;
-      console.log('✅ Token obtained in:', tokenTime, 'ms');
-
-      if (token) {
-        console.log('📤 Sending test notification...');
-        const sendStart = Date.now();
-        const { sendTestExpoNotification } = await import('../../../services/testPushService');
-        const result = await sendTestExpoNotification(token, 'Test Notification', 'This is a test from the server!');
-        const sendTime = Date.now() - sendStart;
-        console.log('📦 Notification sent in:', sendTime, 'ms');
-        console.log('📋 Response:', result);
-
-        const totalTime = Date.now() - startTime;
-        console.log('🎯 Total test time:', totalTime, 'ms');
-
-        Alert.alert('Success', `Test notification sent in ${sendTime}ms!`);
-      } else {
-        console.error('❌ No push token received');
-        Alert.alert('Error', 'Failed to get push token');
-      }
-    } catch (error) {
-      const errorTime = Date.now() - startTime;
-      console.error('💥 Test notification error after', errorTime, 'ms:', error);
-      Alert.alert('Error', `Failed to send test notification: ${(error as Error).message || error}`);
     }
   };
 
@@ -264,13 +228,6 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
       hasSwitch: false,
     },
     {
-      id: 5,
-      title: 'Test Server Notification',
-      icon: 'notifications' as const,
-      iconLibrary: 'Ionicons' as const,
-      hasSwitch: false,
-    },
-    {
       id: 4,
       title: 'Logout',
       icon: 'log-out-outline' as const,
@@ -293,17 +250,17 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
   };
 
   const getIconColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#000', '#ff4444'];
+    const colors = ['#000', '#000', '#000', '#ff4444'];
     return colors[index] || '#000';
   };
 
   const getIconBackground = (index: number) => {
-    const backgrounds = ['#f0f0f0', '#f0f0f0', '#f0f0f0', '#f0f0f0', '#f0f0f0'];
+    const backgrounds = ['#f0f0f0', '#f0f0f0', '#f0f0f0', '#f0f0f0'];
     return backgrounds[index] || '#f0f0f0';
   };
 
   const getTextColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#000', '#ff4444'];
+    const colors = ['#000', '#000', '#000', '#ff4444'];
     return colors[index] || '#000';
   };
 
@@ -364,8 +321,6 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
                   setIsChangePasswordModalVisible(true);
                 } else if (item.id === 3) {
                   setIsAccountInfoModalVisible(true);
-                } else if (item.id === 5) {
-                  handleTestNotification();
                 } else if (item.id === 4) {
                   handleLogout();
                 }

@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native'
-import React, { useState } from 'react'
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
 
 // Define the type for dropdown items
 interface ServiceItem {
@@ -17,27 +17,27 @@ export default function Services({ onSelect }: ServicesProps) {
   const [selectedItem, setSelectedItem] = useState<ServiceItem | null>(null);
 
   const dropDownItems: ServiceItem[] = [
-     { id: 1, name: 'Haircut(Walk in)', price: '₱150' },
-     { id: 2, name: 'Reservation(Walk in)', price: '₱200' },
+     { id: 1, name: 'Haircut (Walk-in)', price: '₱150' }, // Adjusted name for consistency
+     { id: 2, name: 'Reservation (Walk-in)', price: '₱200' }, // Adjusted name for consistency
      { id: 3, name: 'Haircut/Wash', price: '₱250' },
      { id: 4, name: 'Haircut/Hot Towel', price: '₱250' },
      { id: 5, name: 'Hairdye/Haircut', price: '₱350' },
-     { id: 6, name: 'Hair color/Haircut', price: '₱400' },
+     { id: 6, name: 'Hair Color/Haircut', price: '₱400' }, // Corrected capitalization
      { id: 7, name: 'Highlights/Haircut', price: '₱500' },
-     { id: 8, name: 'Balyage/Haircut', price: '₱500' },
+     { id: 8, name: 'Balayage/Haircut', price: '₱500' }, // Corrected spelling
      { id: 9, name: 'Bleaching/Haircut', price: '₱800' },
      { id: 10, name: 'Perm/Haircut', price: '₱1000' },
-     { id: 11, name: 'Rebond/ShortHair', price: '₱1000' },
-     { id: 12, name: 'Rebound/LongHair', price: '₱1500' }
-  ]
+     { id: 11, name: 'Rebond/Short Hair', price: '₱1000' }, // Adjusted name for consistency
+     { id: 12, name: 'Rebond/Long Hair', price: '₱1500' } // Adjusted name for consistency
+  ];
 
   const handleSelect = (item: ServiceItem): void => {
-    setSelectedItem(item)
-    setIsOpen(false)
+    setSelectedItem(item);
+    setIsOpen(false);
     if (onSelect) {
-      onSelect(item)
+      onSelect(item);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -45,7 +45,7 @@ export default function Services({ onSelect }: ServicesProps) {
         style={[styles.droppedBtn, isOpen && styles.dropdownBtnOpen]}
         onPress={() => setIsOpen(!isOpen)}
       >
-        <Text style={[styles.buttonText, !selectedItem && styles.placeholderText]}>
+        <Text style={[styles.buttonText, !selectedItem && styles.placeholderText]} numberOfLines={1}>
           {selectedItem ? `${selectedItem.price} - ${selectedItem.name}` : 'Select Service'}
         </Text>
         <Text style={styles.arrow}>
@@ -69,7 +69,7 @@ export default function Services({ onSelect }: ServicesProps) {
                   <Text style={[
                     styles.itemText,
                     selectedItem?.id === item.id && styles.selectedItemText
-                  ]}>
+                  ]} numberOfLines={1}>
                     {item.name}
                   </Text>
                   <Text style={[
@@ -88,15 +88,15 @@ export default function Services({ onSelect }: ServicesProps) {
         </View>
       )}
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     marginTop: 20,
-    alignItems: 'center',
-    right: 5,
-    bottom: 20 // Changed from 'right: 15' to proper padding
+    // Removed 'alignItems: center' and 'right: 5' as parent wrapper handles centering
+    // Removed 'bottom: 20' - this was causing an unexpected offset.
+    width: '100%', // Take full width of parent inputWrapper
   },
   title: {
     fontSize: 18,
@@ -107,12 +107,12 @@ const styles = StyleSheet.create({
   droppedBtn: {
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#b1b1b1ff',
+    borderColor: '#b1b1b1', // Removed 'ff' for standard hex color
     borderRadius: 10,
     paddingHorizontal: 16,
     height: 50,
-    width: '100%',
-    maxWidth: 370,
+    width: '100%', // Make button width responsive
+    // Removed 'maxWidth: 370' as width: '100%' within inputWrapper is better
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
-    left: 5
+    // Removed 'left: 5'
   },
   dropdownBtnOpen: {
     borderColor: '#000',
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   placeholderText: {
-    color: '#575757ff',
+    color: '#575757', // Removed 'ff'
   },
   arrow: {
     fontSize: 12,
@@ -149,11 +149,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#000',
     borderTopWidth: 0,
-    width: '100%',
-    maxWidth: 380,
+    width: '100%', // Make dropdown container width responsive
+    // Removed 'maxWidth: 380' as width: '100%' within inputWrapper is better
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
-    height: 200,
+    maxHeight: 200, // Use maxHeight for flexibility
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -162,9 +162,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 4,
+    zIndex: 1, // Ensure dropdown appears above other content
   },
   scrollView: {
-    flex: 1,
+    flexGrow: 1, // Allow ScrollView to grow based on content
   },
   dropdownItem: {
     paddingHorizontal: 16,
@@ -209,4 +210,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 10,
   },
-})
+});

@@ -69,31 +69,38 @@ export default function BottomTab({ activeTab, onTabPress }: BottomTabProps) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
-    alignItems: 'center',
+    // alignSelf: 'stretch', // Ensure it stretches full width
+    width: '100%', // Explicitly set width to 100%
+    alignItems: 'center', // Keep content centered horizontally if bottomTab has maxWidth
     justifyContent: 'center',
     paddingTop: 10,
     paddingBottom: 10,
+    borderTopWidth: StyleSheet.hairlineWidth, // Add a subtle top border
+    borderTopColor: '#e0e0e0', // Light gray border color
   },
   bottomTab: {
-    justifyContent: 'space-around',
+    justifyContent: 'space-around', // Distribute items evenly
     alignItems: 'center',
     flexDirection: 'row',
-    width: '100%',
-    height: 70,
-    paddingHorizontal: 20,
-    gap: 70
+    width: '100%', // Take full width of its parent container
+    // Removed maxWidth to allow it to stretch fully unless explicitly needed
+    minHeight: 60, // Slightly reduced minHeight for more flexibility
+    paddingHorizontal: 10, // Adjusted padding for better spacing
+    paddingVertical: 8,
+    // Removed gap property for better responsiveness with space-around
   },
   tabButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    flex: 1, // Each tab button takes equal available space
+    paddingVertical: 5, // Added vertical padding for touch area
   },
   tabIcon: {
     textAlign: 'center',
     marginBottom: 4,
   },
   bottomTabText: {
-    fontFamily: 'Satoshi-Bold',
+    fontFamily: 'Satoshi-Bold', // Ensure this font is loaded in your project
     fontSize: 12,
     textAlign: 'center',
   }

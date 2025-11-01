@@ -16,22 +16,50 @@ interface InsertData {
   receipt_code?: string
   payment_method?: string | null
   push_token?: string | null
+  payment_status?: string | null
 }
 
 const generateReceiptCode = async () => {
-  const { data: maxCodeData } = await supabase
-    .from('appointment_sched')
-    .select('receipt_code')
-    .order('receipt_code', { ascending: false })
-    .limit(1);
+  try {
+    // Query the database for the highest receipt_code starting with 'MSB-'
+    const { data, error } = await supabase
+      .from('appointment_sched')
+      .select('receipt_code')
+      .like('receipt_code', 'MSB-%')
+      .order('receipt_code', { ascending: false })
+      .limit(1);
 
-  let nextNumber = 1;
-  if (maxCodeData && maxCodeData.length > 0) {
-    const maxCode = maxCodeData[0].receipt_code;
-    const number = parseInt(maxCode.replace('MSB-', ''));
-    nextNumber = number + 1;
+    if (error) {
+      console.error('Error fetching max receipt_code:', error);
+      // Fallback to timestamp-based code if query fails
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.floor(Math.random() * 100);
+      return `MSB${timestamp}${random.toString().padStart(2, '0')}`;
+    }
+
+    let nextNumber = 1; // Default if no existing codes
+
+    if (data && data.length > 0) {
+      const maxCode = data[0].receipt_code;
+      // Extract the number part after 'MSB-'
+      const numberPart = maxCode.split('-')[1];
+      if (numberPart) {
+        const currentNumber = parseInt(numberPart, 10);
+        if (!isNaN(currentNumber)) {
+          nextNumber = currentNumber + 1;
+        }
+      }
+    }
+
+    // Format as MSB-XXXX (4-digit padded)
+    return `MSB-${nextNumber.toString().padStart(4, '0')}`;
+  } catch (err) {
+    console.error('Unexpected error generating receipt code:', err);
+    // Fallback
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 100);
+    return `MSB${timestamp}${random.toString().padStart(2, '0')}`;
   }
-  return `MSB-${nextNumber.toString().padStart(4, '0')}`;
 };
 
 export async function insertDropdownSelection(data: InsertData) {
@@ -76,6 +104,7 @@ export async function insertDropdownSelection(data: InsertData) {
           receipt_code: receiptCode,
           payment_method: data.payment_method ?? null,
           push_token: pushToken,
+          payment_status: data.payment_status ?? 'Unpaid',
         },
       ])
       .select('id')

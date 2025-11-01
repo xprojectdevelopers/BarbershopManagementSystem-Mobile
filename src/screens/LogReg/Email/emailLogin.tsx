@@ -14,6 +14,10 @@ import { useAuth } from '../../../contexts/AuthContext'
 import { useNotification } from '../../../contexts/notificationContext'
 import NetInfo from '@react-native-community/netinfo';
 
+//icons
+import AntDesign from '@expo/vector-icons/AntDesign';
+import Entypo from '@expo/vector-icons/Entypo';
+
 const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email)
@@ -25,10 +29,6 @@ type EmailLoginNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'LoginOptions' | 'Home'
 >;
-
-//icons
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Entypo from '@expo/vector-icons/Entypo';
 
 export default function EmailLogin() {
   const [email, setEmail] = useState('')

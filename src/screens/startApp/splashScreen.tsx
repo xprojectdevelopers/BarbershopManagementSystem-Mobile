@@ -47,7 +47,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.Image
-        style={[styles.icon, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}
+        style={[{ transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}
         source={require('../../../assets/img/Mobile Logo.png')}
       />
       {showLoading && (

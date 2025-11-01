@@ -5,12 +5,23 @@ import {
   KeyboardAvoidingView, 
   TouchableOpacity,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  Dimensions, // Import Dimensions
+  Platform // Import Platform for iOS/Android specific adjustments
 } from 'react-native'
 import React from 'react'
 
 //icons
 import AntDesign from '@expo/vector-icons/AntDesign';
+
+// Get screen dimensions
+const { width, height } = Dimensions.get('window');
+
+// Define your responsive functions
+const responsiveWidth = (percent: number) => (width * percent) / 100;
+const responsiveHeight = (percent: number) => (height * percent) / 100;
+// Base on iPhone 6/7/8 width (375)
+const responsiveFontSize = (size: number) => size * Math.min(width, height) / 375; 
 
 type Screen = 'EmailScreen' | 'UserPassword' | 'ContactNumber'
 
@@ -34,12 +45,14 @@ export default function EmailScreen({
 }: EmailScreenProps) {
 
   return (
-    <View style={{flex: 1}}>
+    <View style={styles.rootContainer}> {/* Use rootContainer for full screen */}
       <TouchableOpacity onPress={goBack} style={styles.backBtn}>
-        <AntDesign name="arrow-left" size={34} color="black" />
+        <AntDesign name="arrow-left" size={responsiveFontSize(34)} color="black" /> 
       </TouchableOpacity>
       <Text style={styles.Title}>What's your email?</Text>
-      <View style={styles.container}>
+      <View  
+        style={styles.keyboardAvoidingContainer} // New style for KeyboardAvoidingView
+      >
         <View style={styles.EmailForm}>
           <Text style={styles.emailText}>Email</Text>
           <TextInput 
@@ -54,13 +67,17 @@ export default function EmailScreen({
           />
           {error && (
             <Text
-              style={{ color: "red", fontFamily: 'Satoshi-Regular', fontSize: 14, top: 10 }}
+              style={styles.errorText}
             >
               {error}
             </Text>
           )}
-          <Text style={{fontFamily: 'Satoshi-Regular', fontSize: 14, top: 10 }}>You'll need to confirm this email later</Text>
-          <TouchableOpacity onPress={handleNext} disabled={loading || !email} style={[styles.continueBtn, {opacity: (!email || loading) ? 0.5 : 1,}]}>
+          <Text style={styles.confirmationText}>You&apos;ll need to confirm this email later</Text>
+          <TouchableOpacity 
+            onPress={handleNext} 
+            disabled={loading || !email} 
+            style={[styles.continueBtn, {opacity: (!email || loading) ? 0.5 : 1,}]}
+          >
            {loading ? (
             <ActivityIndicator color="white" />
           ) : (
@@ -78,48 +95,72 @@ export default function EmailScreen({
 }
 
 const styles = StyleSheet.create({
+  rootContainer: {
+    flex: 1,
+    backgroundColor: '#fff', // Assuming a white background for consistency
+  },
   backBtn: {
     position: 'absolute',
-    top: 50,
-    left: 20
+    top: Platform.OS === 'ios' ? responsiveHeight(6) : responsiveHeight(4), // Adjusted for iOS notch
+    left: responsiveWidth(5), 
+    zIndex: 1, // Ensure button is tappable
   },
-  container: {
+  keyboardAvoidingContainer: { // Added a specific style for the KeyboardAvoidingView
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   Title: {
-    top: 120,
+    position: 'absolute', // Position title absolutely to center it within the top half
+    top: responsiveHeight(15), 
+    width: '100%', 
     textAlign: 'center',
-    fontSize: 28,
+    fontSize: responsiveFontSize(28), // Original size: 28
     fontFamily: 'Satoshi-Bold'
   },
   EmailForm: {
-    bottom:200,
+    marginTop: -responsiveHeight(37), // Push it up to simulate original 'bottom: 200' effect
+    width: responsiveWidth(90), // Make form width responsive
+    alignItems: 'flex-start', // Align children to the start for text
   },
   emailText: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    bottom: 5,
+    fontSize: responsiveFontSize(16), // Original size: 16
+    marginBottom: responsiveHeight(1), // Use marginBottom instead of top/bottom
   },
   emailInput: {
-    padding: 15,
+    padding: responsiveFontSize(15 * 0.7), // Scale padding based on font size
     borderRadius: 10,
     backgroundColor: '#cacacaff',
-    width: 380,
-    height: 50,
+    width: '100%', // Take full width of parent (EmailForm)
+    height: responsiveHeight(6), // Scale height
+    fontSize: responsiveFontSize(16), // Adjust font size inside input
+    // The borderColor will be overridden by the prop, so keep it for default
+    borderColor: '#e5e7eb', 
+    borderWidth: 1, // Add borderWidth for consistency with error state
+  },
+  errorText: {
+    color: "red", 
+    fontFamily: 'Satoshi-Regular', 
+    fontSize: responsiveFontSize(14), // Original size: 14
+    marginTop: responsiveHeight(1.2), // Use marginTop
+  },
+  confirmationText: {
+    fontFamily: "Satoshi-Regular", 
+    fontSize: responsiveFontSize(14), // Original size: 14
+    marginTop: responsiveHeight(1.2), // Use marginTop
   },
   continueBtn: {
     backgroundColor: '#000000ff',
-    width: 380,
-    height: 50,
+    width: '100%', // Take full width of parent (EmailForm)
+    height: responsiveHeight(6), // Scale height
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 30,
-    top: 30
+    marginTop: responsiveHeight(4), // Use marginTop
   },
   continueText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16), // Original size: 16
     color: 'white',
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',

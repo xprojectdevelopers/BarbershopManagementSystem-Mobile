@@ -19,8 +19,17 @@ interface MonthlyAnnouncement {
   image_url: string;
 }
 
-const { width } = Dimensions.get('window');
-const itemWidth = 350;
+// Get device dimensions
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Responsive scaling functions
+const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
+const verticalScale = (size: number) => (SCREEN_HEIGHT / 812) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Responsive card dimensions
+const CARD_WIDTH = SCREEN_WIDTH * 0.9; // 90% of screen width
+const CARD_HEIGHT = CARD_WIDTH * 1.3; // Maintain aspect ratio
 
 const MonthlyAnnouncement: React.FC = () => {
   const [announcements, setAnnouncements] = useState<MonthlyAnnouncement[]>([]);
@@ -43,7 +52,7 @@ const MonthlyAnnouncement: React.FC = () => {
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
       scrollRef.current?.scrollTo({
-        x: nextIndex * itemWidth,
+        x: nextIndex * CARD_WIDTH,
         animated: true,
       });
     }, 3000);
@@ -53,10 +62,10 @@ const MonthlyAnnouncement: React.FC = () => {
 
   useEffect(() => {
     if (announcements.length > 0) {
-      indicatorWidths.current = announcements.map(() => new Animated.Value(8));
+      indicatorWidths.current = announcements.map(() => new Animated.Value(moderateScale(8)));
       // Set initial active
       if (indicatorWidths.current[currentIndex]) {
-        indicatorWidths.current[currentIndex].setValue(28);
+        indicatorWidths.current[currentIndex].setValue(moderateScale(28));
       }
     }
   }, [announcements]);
@@ -65,7 +74,7 @@ const MonthlyAnnouncement: React.FC = () => {
     if (indicatorWidths.current.length > 0) {
       indicatorWidths.current.forEach((width: Animated.Value, index: number) => {
         Animated.timing(width, {
-          toValue: index === currentIndex ? 28 : 8,
+          toValue: index === currentIndex ? moderateScale(28) : moderateScale(8),
           duration: 300,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: false,
@@ -96,7 +105,7 @@ const MonthlyAnnouncement: React.FC = () => {
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / itemWidth);
+    const index = Math.round(scrollPosition / CARD_WIDTH);
     setCurrentIndex(index);
     currentIndexRef.current = index;
   };
@@ -139,6 +148,8 @@ const MonthlyAnnouncement: React.FC = () => {
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={handleScroll}
         style={styles.scrollView}
+        snapToInterval={CARD_WIDTH}
+        decelerationRate="fast"
       >
         {allImages.map((item, index) => (
           <View key={index} style={styles.imageContainer}>
@@ -147,7 +158,7 @@ const MonthlyAnnouncement: React.FC = () => {
         ))}
       </ScrollView>
 
-      {/* ✅ Fixed numeric indicator outside of ScrollView */}
+      {/* Fixed numeric indicator */}
       <View style={styles.topRightFixed}>
         <Text style={styles.counter}>
           {currentIndex + 1}/{allImages.length}
@@ -177,58 +188,59 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 40
+    marginTop: verticalScale(40),
+    marginBottom: verticalScale(20),
   },
   scrollView: {
-    width: 350,
-    height: 450,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
   },
   imageContainer: {
-    width: 350,
-    height: 450,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
     position: 'relative',
   },
   image: {
-    width: 350,
-    height: 450,
-    borderRadius: 20,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: moderateScale(20),
   },
   topRightFixed: {
     position: 'absolute',
-    top: 20,
-    right: 40,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    top: verticalScale(20),
+    right: scale(40),
+    backgroundColor: 'rgba(156, 156, 156, 0.6)',
+    borderRadius: moderateScale(10),
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
   },
   counter: {
     color: 'white',
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontFamily: 'Satoshi-Medium',
   },
   indicatorContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 10,
+    marginTop: verticalScale(10),
   },
   baseIndicator: {
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
+    marginHorizontal: scale(4),
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: verticalScale(10),
+    fontSize: moderateScale(16),
     fontFamily: 'Satoshi-Medium',
   },
   errorText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: 'red',
     fontFamily: 'Satoshi-Medium',
   },
   noImagesText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontFamily: 'Satoshi-Medium',
   },
 });

@@ -9,6 +9,7 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  Dimensions, // Import Dimensions
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
@@ -19,8 +20,7 @@ import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProfileById } from '../../lib/supabase/profileFunctions';
 import { getEmployeeById } from '../../lib/supabase/employeeFunctions';
-import { getBookedTimesForDateAndBarber } from '../../lib/supabase/appointmentFunctions';
-import { NotificationService } from '../../services/notificationService';
+// import { NotificationService } from '../../services/notificationService';
 
 // Icons
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -36,10 +36,11 @@ import ToolTip1 from '../../components/Modals/Tooltips/toolTip1';
 import ToolTip2 from '../../components/Modals/Tooltips/toolTip2';
 import ToolTip3 from '../../components/Modals/Tooltips/tooTip3';
 
-// Supabase
+// Get screen dimensions for responsiveness
+const { width } = Dimensions.get('window');
 
 interface BarberItem {
-  id: number;
+  id: string;
   label: string;
   value: string;
 }
@@ -61,7 +62,7 @@ export default function AppointmentScreen() {
   const [selectedBarber, setSelectedBarber] = React.useState<BarberItem | null>(null);
   const [selectedService, setSelectedService] = React.useState<ServiceItem | null>(null);
   const [selectedTime, setSelectedTime] = React.useState<string | null>(null);
-  const [disabledTimes, setDisabledTimes] = React.useState<string[]>([]);
+
   const [customerName, setCustomerName] = React.useState('');
   const [contactNumber, setContactNumber] = React.useState('');
   const [subtotal, setSubtotal] = React.useState<number>(0);
@@ -98,7 +99,7 @@ export default function AppointmentScreen() {
       const fetchEmployee = async () => {
         const employeeResult = await getEmployeeById(selectedBarber.value);
         if (employeeResult.success && employeeResult.data) {
-          setEmployeeName(employeeResult.data.full_name);
+          setEmployeeName(employeeResult.data.Full_Name);
           setEmployeeExpertise(employeeResult.data.expertise);
           setEmployeePhoto(employeeResult.data.photo);
           const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -112,10 +113,27 @@ export default function AppointmentScreen() {
     }
   }, [selectedBarber]);
 
-  React.useEffect(() => {
-    // No longer disabling times based on booked slots or rest days
-    setDisabledTimes([]);
-  }, [selectedBarber, date, restDays]);
+  const convertTo12HourFormat = (time24: string) => {
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'pm' : 'am';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const convertTo24HourFormat = (time12: string) => {
+    const [time, ampm] = time12.split(' ');
+    let [hours, minutes] = time.split(':');
+    let hour = parseInt(hours, 10);
+    if (ampm.toLowerCase() === 'pm' && hour !== 12) {
+      hour += 12;
+    } else if (ampm.toLowerCase() === 'am' && hour === 12) {
+      hour = 0;
+    }
+    return `${hour.toString().padStart(2, '0')}:${minutes}`;
+  };
+
+
 
   const toggleDatePicker = () => setShowPicker(!showPicker);
 
@@ -140,8 +158,6 @@ export default function AppointmentScreen() {
     setTotal(servicePrice + appointmentFee);
   };
 
-
-
   const handleBookAppointment = async (paymentMethod: string) => {
     if (!selectedBarber || !selectedService || !selectedTime || !date) {
       Alert.alert('Validation Error', 'Please fill in all fields');
@@ -164,10 +180,10 @@ export default function AppointmentScreen() {
 
       setBookingStep('Saving appointment...');
       const result = await insertDropdownSelection({
-        barber_id: `Barber - ${selectedBarber.label}`,
+        barber_id: selectedBarber.label,
         service_id: selectedService.name,
         sched_date: date.toISOString().split('T')[0],
-        sched_time: selectedTime,
+        sched_time: convertTo24HourFormat(selectedTime),
         subtotal,
         appointment_fee: appointmentFee,
         total,
@@ -219,12 +235,12 @@ export default function AppointmentScreen() {
     try {
       console.log('🚀 Starting cash payment appointment booking...');
       setBookingStep('Saving appointment...');
-      
+
       const result = await insertDropdownSelection({
-        barber_id: `Barber - ${selectedBarber.label}`,
+        barber_id: selectedBarber.label,
         service_id: selectedService.name,
         sched_date: date.toISOString().split('T')[0],
-        sched_time: selectedTime,
+        sched_time: convertTo24HourFormat(selectedTime),
         subtotal,
         appointment_fee: appointmentFee,
         total,
@@ -277,24 +293,24 @@ export default function AppointmentScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Barber Info */}
         <View style={[styles.dayOff, styles.boxShadow]}>
-           <Image source={require('../../../assets/img/DSC_0332.jpg')} style={styles.dayOffImage} />
+          <Image source={require('../../../assets/img/DSC_0332.jpg')} style={styles.dayOffImage} />
           <View style={styles.dayOffContent}>
-            <Text style={styles.dayOffText}>Name: Almer N. Jaquez</Text>
-            <Text style={styles.dayOffText}>Expertise: Haircut</Text>
-            <Text style={styles.dayOffText}>Rest Day: Sunday</Text>
+            <Text style={styles.dayOffText}>Name: {employeeName || 'Almer N. Jaquez'}</Text>
+            <Text style={styles.dayOffText}>Expertise: {employeeExpertise || 'Haircut'}</Text>
+            <Text style={styles.dayOffText}>Rest Day: {employeeRestDay || 'Sunday'}</Text>
           </View>
         </View>
 
         {/* Barber Selection */}
-        <Text style={styles.barberText}>Choose a barber</Text>
+        <Text style={styles.sectionTitle}>Choose a barber</Text>
         <BarberName onSelect={setSelectedBarber} />
 
         {/* Service Selection */}
-        <Text style={styles.serviceText}>Choose a service</Text>
+        <Text style={styles.sectionTitle}>Choose a service</Text>
         <Services onSelect={handleServiceSelect} />
 
         {/* Date Picker */}
-        <Text style={styles.dateText}>Choose a date</Text>
+        <Text style={styles.sectionTitle}>Choose a date</Text>
         <TouchableOpacity style={styles.dateButton} onPress={toggleDatePicker}>
           <Text style={styles.dateButtonText}>{date ? formatDate(date) : 'Choose a date'}</Text>
           <AntDesign name="calendar" size={20} color="#666" />
@@ -312,85 +328,85 @@ export default function AppointmentScreen() {
         )}
 
         {/* Time Selector */}
-        <View style={styles.time}>
-          <Text style={styles.timeText}>Choose a time</Text>
+        <View style={styles.timeSection}>
+          <Text style={styles.sectionTitle}>Choose a time</Text>
           <Pressable style={styles.timeInfoBtn} onPress={() => setTooltip2Visible(true)}>
             <Ionicons name="information-circle-outline" size={18} color="black" />
           </Pressable>
         </View>
-        <TimeSelector onTimeSelect={setSelectedTime} disabledTimes={disabledTimes} />
+        <TimeSelector onTimeSelect={setSelectedTime} />
 
         {/* Name Display */}
-        <View style={styles.name}>
-          <Text style={styles.nameText}>Your Name</Text>
-          <Text style={styles.displayText}>{customerName}</Text>
+        <View style={styles.infoDisplayContainer}>
+          <Text style={styles.infoDisplayTextTitle}>Your Name</Text>
+          <Text style={styles.infoDisplayValue}>{customerName}</Text>
         </View>
 
         {/* Contact Number Display */}
-        <View style={styles.contact}>
-          <Text style={styles.contactText}>Your Contact Number</Text>
-          <Text style={styles.displayText}>{contactNumber}</Text>
+        <View style={styles.infoDisplayContainer}>
+          <Text style={styles.infoDisplayTextTitle}>Your Contact Number</Text>
+          <Text style={styles.infoDisplayValue}>{contactNumber}</Text>
         </View>
 
         {/* Totals */}
         <View style={styles.totalContainer}>
-          <View style={styles.subTotal}>
-            <Text style={styles.subTotalText1}>Subtotal</Text>
-            <Text style={styles.subTotalText2}>₱{subtotal}</Text>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalRowText}>Subtotal</Text>
+            <Text style={styles.totalRowText}>₱{subtotal.toFixed(2)}</Text>
           </View>
 
-          <View style={styles.AppointmentContainer}>
-           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-             <Text style={styles.AppointmentText1}>Appointment Fee</Text>
-            <Pressable onPress={() => setTooltipVisible(true)}>
-              <Ionicons name="information-circle-outline" size={18} color="white" />
-            </Pressable>
-           </View>
-            <Text style={styles.AppointmentText2}>₱{appointmentFee}</Text>
+          <View style={styles.totalRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.totalRowText}>Appointment Fee</Text>
+              <Pressable onPress={() => setTooltipVisible(true)} style={styles.tooltipIcon}>
+                <Ionicons name="information-circle-outline" size={18} color="white" />
+              </Pressable>
+            </View>
+            <Text style={styles.totalRowText}>₱{appointmentFee.toFixed(2)}</Text>
           </View>
 
-          <View style={styles.total}>
-            <Text style={styles.totalText1}>Total</Text>
-            <Text style={styles.totalText2}>₱{total}</Text>
+          <View style={styles.grandTotalRow}>
+            <Text style={styles.grandTotalText}>Total</Text>
+            <Text style={styles.grandTotalText}>₱{total.toFixed(2)}</Text>
           </View>
         </View>
 
         {/* Buttons */}
         <View style={styles.btnContainer}>
-         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, right: 100 }}>
-           <Text style={{ fontFamily: 'Satoshi-Bold', fontSize: 16, marginBottom: 10 }}>Payment Method</Text>
-          <Pressable style={styles.paymentInfoBtn} onPress={() => setTooltip3Visible(true)}>
-            <Ionicons name="information-circle-outline" size={18} color="black" />
-          </Pressable>
-         </View>
-          <TouchableOpacity 
-            style={[styles.gcashBtn, isBooking && styles.disabledBtn]} 
+          <View style={styles.paymentMethodHeader}>
+            <Text style={styles.paymentMethodTitle}>Payment Method</Text>
+            <Pressable style={styles.paymentInfoBtn} onPress={() => setTooltip3Visible(true)}>
+              <Ionicons name="information-circle-outline" size={18} color="black" />
+            </Pressable>
+          </View>
+          <TouchableOpacity
+            style={[styles.paymentBtn, styles.gcashBtn, isBooking && styles.disabledBtn]}
             onPress={() => handleBookAppointment('GCash')}
             disabled={isBooking}
           >
-            <Text style={styles.gcashText}>
+            <Text style={styles.paymentBtnText}>
               {isBooking && bookingStep.includes('GCash') ? 'Processing...' : 'Pay with Gcash'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.mayaBtn, isBooking && styles.disabledBtn]} 
+          <TouchableOpacity
+            style={[styles.paymentBtn, styles.mayaBtn, isBooking && styles.disabledBtn]}
             onPress={() => handleBookAppointment('Maya')}
             disabled={isBooking}
           >
-            <Text style={styles.mayaText}>
+            <Text style={styles.paymentBtnText}>
               {isBooking && bookingStep.includes('Maya') ? 'Processing...' : 'Pay with Maya'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.payInPersonBtn, isBooking && styles.disabledBtn]} 
+          <TouchableOpacity
+            style={[styles.paymentBtn, styles.payInPersonBtn, isBooking && styles.disabledBtn]}
             onPress={handlePayInPerson}
             disabled={isBooking}
           >
-            <Text style={styles.payInPersonText}>
+            <Text style={styles.paymentBtnText}>
               {isBooking && bookingStep.includes('Cash') ? 'Processing...' : 'Pay with Cash'}
             </Text>
           </TouchableOpacity>
-          
+
           {/* Loading indicator */}
           {isBooking && (
             <View style={styles.loadingContainer}>
@@ -432,259 +448,196 @@ export default function AppointmentScreen() {
 
 const styles = StyleSheet.create({
   container: {
-     flex: 1,
-      backgroundColor: '#fff'
+    flex: 1,
+    backgroundColor: '#fff',
   },
   scrollContent: {
-     paddingBottom: 50
+    paddingBottom: 50,
+    paddingHorizontal: width * 0.05, // 5% padding on left/right
   },
-  backBtn: { 
-    position: 'absolute', 
-    top: 50, 
-    left: 20, 
-    zIndex: 1, 
-    padding: 5 
+  backBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 30, // Adjust for iOS notch
+    left: 20,
+    zIndex: 1,
+    padding: 5,
   },
-  title: { 
-    marginTop: 50, 
-    textAlign: 'center', 
-    fontSize: 22, 
-    fontFamily: 'Satoshi-Bold', 
-    marginBottom: 30
+  title: {
+    marginTop: Platform.OS === 'ios' ? 60 : 30, // Adjust for iOS notch
+    textAlign: 'center',
+    fontSize: 22,
+    fontFamily: 'Satoshi-Bold',
+    marginBottom: 30,
   },
   dayOff: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 20,
+    padding: 15, // Added padding
     marginTop: 10,
-    width: 350,
-    height: 150,
     marginBottom: 20,
     backgroundColor: 'white',
-    shadowColor: '#000',
     borderRadius: 20,
+    width: '100%', // Take full width
+    alignSelf: 'center', // Center horizontally
   },
   boxShadow: {
-    shadowColor: '#000000ff',
-    shadowOffset: { width: 10, height: 10 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowColor: '#000000', // Changed to hex for consistency
+    shadowOffset: { width: 0, height: 5 }, // Adjusted for better look
+    shadowOpacity: 0.1, // Reduced for softer shadow
+    shadowRadius: 10, // Adjusted
+    elevation: 5, // Android shadow
   },
   dayOffImage: {
-     width: 120,
-     height: 120,
-     marginLeft: 20,
-    },
-  dayOffContent: { 
-    marginLeft: 20, 
-    flex: 1 
+    width: width * 0.25, // Responsive width
+    height: width * 0.25, // Responsive height (square)
+    borderRadius: (width * 0.25) / 2, // Make it a circle
+    marginRight: 15, // Use marginRight for spacing
   },
-  dayOffText: { 
-    fontFamily: 'Satoshi-Bold', 
-    fontSize: 16, 
-    marginBottom: 8, 
-    color: '#333' 
+  dayOffContent: {
+    flex: 1, // Allow content to take remaining space
   },
-  barberText: { 
-    fontFamily: 'Satoshi-Bold', 
-    fontSize: 18, 
-    marginTop: 20,
-    marginBottom: 10, 
-    color: '#333', 
-    left: 10 
+  dayOffText: {
+    fontFamily: 'Satoshi-Bold',
+    fontSize: 16,
+    marginBottom: 5, // Reduced margin
+    color: '#333',
   },
-  serviceText: { 
-    fontFamily: 'Satoshi-Bold', 
-    fontSize: 18, 
-    marginTop: 20, 
-    marginBottom: 10, 
-    color: '#333', 
-    left: 10 },
-  dateText: { 
-    fontFamily: 'Satoshi-Bold', 
+  sectionTitle: { // Combined barberText, serviceText, dateText
+    fontFamily: 'Satoshi-Bold',
     fontSize: 18,
-    top: 2, 
-    marginBottom: 10, 
-    color: '#333', 
-    left: 10 
+    marginTop: 20,
+    marginBottom: 10,
+    color: '#333',
+    // Removed fixed 'left: 10', using padding of parent ScrollView
   },
   dateButton: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'white', 
-    borderWidth: 1, 
-    borderColor: '#b1b1b1ff', 
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#b1b1b1',
     borderRadius: 8,
-    width: 370, 
-    height: 50, 
-    marginBottom: 10, 
-    left: 10, 
+    width: '100%', // Responsive width
+    height: 50,
+    marginBottom: 10,
     paddingHorizontal: 16,
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 1 }, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2, 
+    shadowRadius: 2,
     elevation: 2,
   },
-  dateButtonText: { 
-    fontSize: 16, 
-    color: '#333', 
-    fontFamily: 'Satoshi-Regular' 
+  dateButtonText: {
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'Satoshi-Regular',
   },
-  time: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 10, 
-    marginTop: 20 
-  },
-  timeText: { 
-    fontFamily: 'Satoshi-Bold', 
-    fontSize: 18, 
-    color: '#333' },
-  timeInfoBtn: { 
-    marginLeft: 5, 
-    top: 3 
-  },
-  name: { 
-    paddingHorizontal: 10, 
-    marginTop: 40 
-  },
-  nameText: { 
-    fontFamily: 'Satoshi-Bold', 
-    fontSize: 18, 
-    color: '#333' 
-  },
-
-  contact: { 
-    paddingHorizontal: 10, 
-    marginTop: 20 
-  },
-  contactText: { 
-    fontFamily: 'Satoshi-Bold', 
-    fontSize: 18, 
-    color: '#333' 
-  },
-
-  totalContainer: { 
-    marginTop: 50, 
-    marginHorizontal: 10, 
-    backgroundColor: 'black', 
-    borderRadius: 12, 
-    paddingVertical: 30, 
-    paddingHorizontal: 20 
-  },
-  subTotal: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 20 
-  },
-  subTotalText1: { 
-    fontSize: 18, 
-    color: 'white', 
-    fontFamily: 'Satoshi-Bold' 
-  },
-  subTotalText2: { 
-    fontSize: 18, 
-    color: 'white', 
-    fontFamily: 'Satoshi-Bold'
-  },
-  paymentInfoBtn: {
-    marginLeft: 5,
-    top: -3
-  },
-  AppointmentContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between',
-    alignItems: 'center', 
-    marginBottom: 20 
-    },
-  AppointmentText1: { 
-    fontSize: 18, 
-    color: 'white', 
-    fontFamily: 'Satoshi-Bold' 
-  },
-  AppointmentText2: { 
-    fontSize: 18, 
-    color: 'white', 
-    fontFamily: 'Satoshi-Bold' 
-  },
-  total: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    borderTopWidth: 1, 
-    borderTopColor: '#333', 
-    paddingTop: 15, 
-    marginTop: 10 
-  },
-  totalText1: { 
-    fontSize: 20, 
-    color: 'white', 
-    fontFamily: 'Satoshi-Bold' 
-  },
-  totalText2: { 
-    fontSize: 20, 
-    color: 'white', 
-    fontFamily: 'Satoshi-Bold' 
-  },
-  btnContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
+  timeSection: { // Combined 'time'
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20 
+    marginTop: 20,
+    // Removed paddingHorizontal, using parent ScrollView padding
   },
-  gcashBtn: { 
-    backgroundColor: '#00a2ffff', 
-    padding: 10, 
-    borderRadius: 30, 
-    marginBottom: 20, 
-    width: 350, 
-    height: 50 
+  timeInfoBtn: {
+    marginLeft: 5,
+    top: 3,
   },
-  gcashText: { 
-    fontSize: 17, 
-    color: 'white', 
-    textAlign: 'center', 
-    fontFamily: 'Satoshi-Bold' 
+  infoDisplayContainer: { // Combined 'name' and 'contact'
+    marginTop: 20,
+    // Removed paddingHorizontal, using parent ScrollView padding
   },
-  mayaBtn: { 
-    backgroundColor: '#0DB36B', 
-    padding: 10, 
-    borderRadius: 30, 
-    marginBottom: 20, 
-    width: 350, 
-    height: 50 
+  infoDisplayTextTitle: { // Combined nameText and contactText
+    fontFamily: 'Satoshi-Bold',
+    fontSize: 18,
+    color: '#333',
   },
-  mayaText: { 
-    fontSize: 17, 
-    color: 'white', 
-    textAlign: 'center', 
-    fontFamily: 'Satoshi-Bold' 
-  },
-  payInPersonBtn: { 
-    backgroundColor: 'black', 
-    padding: 10, 
-    borderRadius: 30, 
-    marginBottom: 20, 
-    width: 350, 
-    height: 50 
-  },
-  payInPersonText: {
-     fontSize: 17,
-     color: 'white',
-     textAlign: 'center',
-     fontFamily: 'Satoshi-Bold'
-  },
-
-  displayText: {
+  infoDisplayValue: { // Combined displayText
     fontSize: 16,
     fontFamily: 'Satoshi-Bold',
     marginTop: 10,
     color: '#000',
+  },
+  totalContainer: {
+    marginTop: 50,
+    backgroundColor: 'black',
+    borderRadius: 12,
+    paddingVertical: 20, // Adjusted padding
+    paddingHorizontal: 20,
+    width: '100%', // Responsive width
+    alignSelf: 'center', // Center horizontally
+  },
+  totalRow: { // Combined subTotal and AppointmentContainer
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15, // Adjusted margin
+  },
+  totalRowText: { // Combined subTotalText1, AppointmentText1, subTotalText2, AppointmentText2
+    fontSize: 18,
+    color: 'white',
+    fontFamily: 'Satoshi-Bold',
+  },
+  tooltipIcon: {
+    marginLeft: 5,
+    top: 2, // Slight adjustment for alignment
+  },
+  grandTotalRow: { // Combined total
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    paddingTop: 15,
+    marginTop: 10,
+  },
+  grandTotalText: { // Combined totalText1 and totalText2
+    fontSize: 20,
+    color: 'white',
+    fontFamily: 'Satoshi-Bold',
+  },
+  btnContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30, // Adjusted margin
+  },
+  paymentMethodHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15, // Adjusted margin
+    alignSelf: 'flex-start', // Align to start of its container
+    marginLeft: width * 0.05, // Align with scrollview content
+  },
+  paymentMethodTitle: {
+    fontFamily: 'Satoshi-Bold',
+    fontSize: 16,
+  },
+  paymentInfoBtn: {
+    marginLeft: 5,
+    top: -2, // Adjusted
+  },
+  paymentBtn: { // Common styles for all payment buttons
+    padding: 15, // Increased padding for better touch area
+    borderRadius: 30,
+    marginBottom: 15, // Adjusted margin
+    width: '90%', // Responsive width
+    alignSelf: 'center', // Center horizontally
+  },
+  gcashBtn: {
+    backgroundColor: '#00a2ff', // Removed extra 'ff' for standard hex color
+  },
+  mayaBtn: {
+    backgroundColor: '#0DB36B',
+  },
+  payInPersonBtn: {
+    backgroundColor: 'black',
+  },
+  paymentBtnText: { // Combined gcashText, mayaText, payInPersonText
+    fontSize: 17,
+    color: 'white',
+    textAlign: 'center',
+    fontFamily: 'Satoshi-Bold',
   },
   disabledBtn: {
     opacity: 0.6,
@@ -695,6 +648,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
     alignItems: 'center',
+    width: '90%', // Responsive width
+    alignSelf: 'center',
   },
   loadingText: {
     fontSize: 14,

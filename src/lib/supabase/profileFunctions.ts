@@ -172,6 +172,31 @@ export async function insertProfile(profile: CustomerProfile): Promise<ApiRespon
   }
 }
 
+// Upsert profile (insert or update if exists)
+export async function upsertProfile(profile: CustomerProfile): Promise<ApiResponse> {
+  try {
+    const { data, error } = await supabase
+      .from('customer_profiles')
+      .upsert([profile]);
+
+    if (error) {
+      if (error.message && error.message.includes('AuthSessionMissingError')) {
+        error.message = 'Auth session cleared';
+      }
+      console.error('Error upserting profile:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('AuthSessionMissingError')) {
+      err.message = 'Auth session cleared';
+    }
+    console.error('Unexpected error upserting profile:', err);
+    return { success: false, error: err };
+  }
+}
+
 // Update profile by ID
 export async function updateProfile(id: string, profile: Partial<CustomerProfile>): Promise<ApiResponse> {
   try {
@@ -248,6 +273,26 @@ export async function deleteProfile(id: string): Promise<ApiResponse> {
       err.message = 'Auth session cleared';
     }
     console.error('Unexpected error deleting profile:', err);
+    return { success: false, error: err };
+  }
+}
+
+// Get all customer profiles
+export async function getAllCustomerProfiles(): Promise<ApiResponse<CustomerProfile[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('customer_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching all customer profiles:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error fetching all customer profiles:', err);
     return { success: false, error: err };
   }
 }
