@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 20,
     // Removed 'alignItems: center' and 'right: 5' as parent wrapper handles centering
-    // Removed 'bottom: 20' - this was causing an unexpected offset.
+    bottom: 20,
     width: '100%', // Take full width of parent inputWrapper
   },
   title: {

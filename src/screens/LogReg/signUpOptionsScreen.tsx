@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image, ActivityIndicator, Alert, Dimensions } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity, Image, ActivityIndicator, Alert, Dimensions, PixelRatio } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RootStackParamList } from '../../types/navigations'
@@ -10,13 +10,30 @@ import React, { useState } from 'react'
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-// Get screen dimensions
-const { width, height } = Dimensions.get('window');
+// --- Responsive Scaling Constants and Functions ---
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Define a scale factor for responsiveness
-const responsiveWidth = (percent: number) => (width * percent) / 100;
-const responsiveHeight = (percent: number) => (height * percent) / 100;
-const responsiveFontSize = (size: number) => size * Math.min(width, height) / 375; // Base on iPhone 6/7/8 width
+// Reference device dimensions (e.g., iPhone 6/7/8 - 375x667, or iPhone X - 375x812)
+// Using iPhone X dimensions for a more modern baseline that scales well
+const RF_WIDTH_BASE = 375;
+const RF_HEIGHT_BASE = 812;
+
+// Function to scale a size horizontally based on screen width
+const scale = (size: number): number => (SCREEN_WIDTH / RF_WIDTH_BASE) * size;
+
+// Function to scale a size vertically based on screen height
+const verticalScale = (size: number): number => (SCREEN_HEIGHT / RF_HEIGHT_BASE) * size;
+
+// Function for moderate scaling (mixes original size with scaled size)
+// Useful for elements like border-radius, or sizes that shouldn't scale too aggressively
+const moderateScale = (size: number, factor: number = 0.5): number => size + (scale(size) - size) * factor;
+
+// Function to get responsive font size, accounting for user's font scale preference
+const getResponsiveFontSize = (size: number): number => {
+  const fontScale = PixelRatio.getFontScale();
+  return size / fontScale;
+};
+// --- End Responsive Scaling ---
 
 type LoginOptionsNavigationProp = NativeStackNavigationProp<RootStackParamList,
   'GetStarted' | 'EmailSignup' | 'LoginOptions' | 'Home' // Added 'Home' for navigation.reset
@@ -63,14 +80,14 @@ export default function SignUpOptions() {
   return (
     <View style={styles.rootContainer}>
       <TouchableOpacity onPress={() => navigation.navigate('GetStarted')} style={styles.backBtn}>
-        <AntDesign name="arrow-left" size={responsiveFontSize(30)} color="black" />
+        <AntDesign name="arrow-left" size={moderateScale(34)} color="black" />
       </TouchableOpacity>
       <Text style={styles.Title}>Sign up to MLV ST.</Text>
       <View style={styles.container}>
 
-        <View style={styles.loginBtnContainer}>
+        <View style={styles.loginButtonsWrapper}>
           <TouchableOpacity onPress={() => navigation.navigate('EmailSignup')} style={styles.emailBtn}>
-            <MaterialCommunityIcons name="email" size={responsiveFontSize(22)} color="white" style={styles.emailIcon} />
+            <MaterialCommunityIcons name="email" size={moderateScale(24)} color="white" style={{right: scale(58)}} />
             <Text style={styles.emailText}>Sign up with Email</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -79,21 +96,21 @@ export default function SignUpOptions() {
             disabled={googleLoading}
           >
             {googleLoading ? (
-              <ActivityIndicator size="small" color="black" style={styles.googleIcon} />
+              <ActivityIndicator size={moderateScale(24)} color="black" style={{right: scale(50)}} />
             ) : (
-              <Image source={require('../../../assets/icon/googleLogo.png')} style={styles.googleLogo} />
+              <Image source={require('../../../assets/icon/googleLogo.png')} style={{width: moderateScale(24), height: moderateScale(24), right: scale(50)}} />
             )}
             <Text style={styles.googleText}>
               {googleLoading ? 'Signing up...' : 'Sign up with Google'}
             </Text>
           </TouchableOpacity>
           {/* Removed Facebook button as it was present in styles but not in render */}
-          <Text style={styles.signUpText}>
-            Don't have an account?
-            <TouchableOpacity onPress={() => navigation.navigate('LoginOptions')}>
+          <View style={styles.signUpTextContainer}>
+            <Text style={styles.signUpText}>Don't have an account?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('LoginOptions')} disabled={googleLoading}>
               <Text style={styles.signUpText1}> Sign In</Text>
             </TouchableOpacity>
-          </Text>
+          </View>
         </View>
       </View>
     </View>
@@ -107,73 +124,62 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     position: 'absolute',
-    top: responsiveHeight(6), // Adjusted percentage
-    left: responsiveWidth(5), // Adjusted percentage
-    zIndex: 1, // Ensure button is tappable
+    top: verticalScale(50), // Scaled from 50
+    left: scale(20), // Scaled from 20
+    zIndex: 1,
   },
-  container: {
+  container : {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   Title: {
-    position: 'absolute', // Position title absolutely to center it within the top half
-    top: responsiveHeight(15), // Adjusted percentage
-    width: '100%', // Take full width to center text
+    position: 'absolute',
+    top: verticalScale(120), // Scaled from 120
     textAlign: 'center',
-    fontSize: responsiveFontSize(32),
+    fontSize: getResponsiveFontSize(32), // Scaled from 32
     fontFamily: 'Satoshi-Bold',
+    width: '100%', // Added for better centering consistency
   },
-  loginBtnContainer: {
-    bottom: responsiveHeight(30), // Adjusted to be relative to the bottom of the container
+  loginButtonsWrapper: { // Renamed for clarity, from 'loginBtn'
+    bottom: verticalScale(170), // Scaled from 170
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1, // Allow this container to take up available space
-    paddingHorizontal: responsiveWidth(5), // Add horizontal padding
-    marginTop: responsiveHeight(20), // Push down from the title area
+    // Removed 'flex: 1' from here as it caused layout issues
   },
   emailBtn: {
     backgroundColor: 'black',
-    padding: responsiveFontSize(0),
-    borderRadius: responsiveFontSize(30),
-    marginBottom: responsiveHeight(1.5), // Responsive margin
-    width: responsiveWidth(90), // Take 90% of screen width
-    height: responsiveHeight(6), // Responsive height
+    padding: moderateScale(12), // Scaled from 12
+    borderRadius: moderateScale(30), // Scaled from 30
+    marginBottom: verticalScale(10), // Scaled from 10
+    width: scale(350), // Scaled from 350
+    maxWidth: moderateScale(350), // Ensure it doesn't get too big on large screens
+    height: verticalScale(50), // Scaled from 50
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center'
   },
-  emailIcon: {
-    marginRight: responsiveWidth(5), // Responsive margin
-  },
   emailText: {
-    fontSize: responsiveFontSize(16),
+    fontSize: getResponsiveFontSize(16), // Scaled from 16
     color: 'white',
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
   },
   googleBtn: {
     backgroundColor: 'white',
-    padding: responsiveFontSize(0),
-    borderWidth: 1,
-    borderRadius: responsiveFontSize(30),
-    marginBottom: responsiveHeight(1.5),
-    width: responsiveWidth(90),
-    height: responsiveHeight(6),
+    padding: moderateScale(12), // Scaled from 12
+    borderWidth: moderateScale(1), // Scaled from 1
+    borderRadius: moderateScale(30), // Scaled from 30
+    marginBottom: verticalScale(10), // Scaled from 10
+    width: scale(350), // Scaled from 350
+    maxWidth: moderateScale(350), // Ensure it doesn't get too big on large screens
+    height: verticalScale(50), // Scaled from 50
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center'
   },
-  googleLogo: {
-    width: responsiveFontSize(24),
-    height: responsiveFontSize(24),
-    marginRight: responsiveWidth(5),
-  },
-  googleIcon: { // For ActivityIndicator
-    marginRight: responsiveWidth(5),
-  },
   googleText: {
-    fontSize: responsiveFontSize(16),
+    fontSize: getResponsiveFontSize(16), // Scaled from 16
     color: 'black',
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
@@ -181,21 +187,23 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
-  // facebookBtn and facebookText are removed as they were not used in the render method
+  // New container for the "Don't have an account? Sign Up" text
+  signUpTextContainer: {
+    flexDirection: 'row', // To align "Don't have an account?" and "Sign Up" horizontally
+    alignItems: 'center',
+    marginTop: verticalScale(15), // Added for spacing, adjust as needed
+  },
   signUpText: {
-    marginTop: responsiveHeight(2), // Responsive margin
-    fontSize: responsiveFontSize(16),
+    fontSize: getResponsiveFontSize(16), // Scaled from 16
     color: 'gray',
-    textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
-    flexDirection: 'row',// Adjusted to align better
-    alignSelf: 'center' // Ensures the entire row is centered
+    // Removed flexDirection: 'row' from here as it belongs to the container
   },
   signUpText1: {
-    top: responsiveHeight(0.1), // Adjusted to align better
-    fontSize: responsiveFontSize(16),
+    // Removed 'top: 4.5' because 'flexDirection: row' on parent handles vertical alignment
+    fontSize: getResponsiveFontSize(16), // Scaled from 16
     color: 'black',
-    textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
+    // Removed 'textAlign: 'center'' as it's not needed for inline text in a row
   }
 })

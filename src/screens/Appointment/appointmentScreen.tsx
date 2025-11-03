@@ -9,7 +9,7 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  Dimensions, // Import Dimensions
+  useWindowDimensions, // Import useWindowDimensions
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
@@ -36,8 +36,7 @@ import ToolTip1 from '../../components/Modals/Tooltips/toolTip1';
 import ToolTip2 from '../../components/Modals/Tooltips/toolTip2';
 import ToolTip3 from '../../components/Modals/Tooltips/tooTip3';
 
-// Get screen dimensions for responsiveness
-const { width } = Dimensions.get('window');
+// Get screen dimensions for responsiveness using useWindowDimensions
 
 interface BarberItem {
   id: string;
@@ -56,6 +55,7 @@ type AppointmentScreenNavigationProp = NativeStackNavigationProp<RootStackParamL
 export default function AppointmentScreen() {
   const navigation = useNavigation<AppointmentScreenNavigationProp>();
   const { user } = useAuth();
+  const { width, height } = useWindowDimensions();
 
   const [date, setDate] = React.useState<Date | null>(null);
   const [showPicker, setShowPicker] = React.useState(false);
@@ -80,6 +80,8 @@ export default function AppointmentScreen() {
   const [tooltip3Visible, setTooltip3Visible] = React.useState(false);
   const [isBooking, setIsBooking] = React.useState(false);
   const [bookingStep, setBookingStep] = React.useState('');
+  const [disabledTimes, setDisabledTimes] = React.useState<string[]>([]);
+  const [bookedUsers, setBookedUsers] = React.useState<{ time: string; user: string }[]>([]);
 
   React.useEffect(() => {
     if (user) {
@@ -99,13 +101,13 @@ export default function AppointmentScreen() {
       const fetchEmployee = async () => {
         const employeeResult = await getEmployeeById(selectedBarber.value);
         if (employeeResult.success && employeeResult.data) {
-          setEmployeeName(employeeResult.data.Full_Name);
-          setEmployeeExpertise(employeeResult.data.expertise);
-          setEmployeePhoto(employeeResult.data.photo);
+          setEmployeeName(employeeResult.data.Full_Name || 'undefined');
+          setEmployeeExpertise(employeeResult.data.Employee_Role || 'undefined');
+          setEmployeePhoto(employeeResult.data.Photo);
           const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
           const workDays = employeeResult.data.work_sched || [];
           const restDays = allDays.filter(day => !workDays.includes(day));
-          setEmployeeRestDay(restDays.length > 0 ? restDays.join(', ') : 'No rest day');
+          setEmployeeRestDay(restDays.length > 0 ? restDays.join(', ') : 'undefined');
           setRestDays(restDays);
         }
       };
@@ -113,24 +115,103 @@ export default function AppointmentScreen() {
     }
   }, [selectedBarber]);
 
+  React.useEffect(() => {
+    if (selectedBarber && date) {
+      const fetchBookedTimes = async () => {
+        try {
+          const queryDate = date.toISOString().split('T')[0];
+          const queryBarberId = selectedBarber.label; // Use the barber's label (name) as stored in database
+
+          console.log('🔍 Fetching booked times for:', {
+            barberId: queryBarberId,
+            date: queryDate,
+            barberLabel: selectedBarber.label,
+            selectedBarberValue: selectedBarber.value
+          });
+
+          // First, let's check what columns exist in the table
+          const { data: allColumns, error: allError } = await supabase
+            .from('appointment_sched')
+            .select('*')
+            .limit(1);
+
+          console.log('🔍 Table structure check:', { allColumns, allError });
+
+          const { data, error } = await supabase
+            .from('appointment_sched')
+            .select('*')
+            .eq('barber_id', queryBarberId)
+            .eq('sched_date', queryDate)
+            .neq('status', 'Cancelled'); // Exclude cancelled appointments
+
+          console.log('🔍 Checking barber_id match:', {
+            queryBarberId,
+            appointmentBarberId: data?.[0]?.barber_id,
+            matches: queryBarberId === data?.[0]?.barber_id
+          });
+
+          console.log('📊 Booked times query result:', { data, error, count: data?.length || 0 });
+
+          if (error) {
+            console.error('Error fetching booked times:', error);
+            // If table doesn't exist or no data, just set empty arrays
+            setDisabledTimes([]);
+            setBookedUsers([]);
+            return;
+          }
+
+          const bookedTimes: string[] = [];
+          const users: { time: string; user: string }[] = [];
+
+          if (data && data.length > 0) {
+            data.forEach((appointment: any) => {
+              console.log('📅 Processing appointment:', appointment);
+
+              // Try different possible column names for time
+              const timeValue = appointment.sched_time || appointment.time_sched || appointment.time || appointment.schedTime;
+              const customerName = appointment.customer_name || appointment.customerName || appointment.name || 'Unknown';
+
+              console.log('⏰ Time value found:', timeValue);
+
+              if (timeValue) {
+                const time12 = convertTo12HourFormat(timeValue);
+                console.log('⏰ Converted time:', timeValue, '->', time12);
+
+                bookedTimes.push(time12);
+                users.push({ time: time12, user: customerName });
+              } else {
+                console.log('❌ No time value found in appointment:', appointment);
+              }
+            });
+          }
+
+          console.log('✅ Final disabled times:', bookedTimes);
+          console.log('✅ Final booked users:', users);
+          setDisabledTimes(bookedTimes);
+          setBookedUsers(users);
+        } catch (err) {
+          console.error('Unexpected error fetching booked times:', err);
+          // Set empty arrays on error
+          setDisabledTimes([]);
+          setBookedUsers([]);
+        }
+      };
+      fetchBookedTimes();
+    } else {
+      setDisabledTimes([]);
+      setBookedUsers([]);
+    }
+  }, [selectedBarber, date]);
+
   const convertTo12HourFormat = (time24: string) => {
+    console.log('🔄 Converting time:', time24);
     const [hours, minutes] = time24.split(':');
     const hour = parseInt(hours, 10);
     const ampm = hour >= 12 ? 'pm' : 'am';
     const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
-  };
-
-  const convertTo24HourFormat = (time12: string) => {
-    const [time, ampm] = time12.split(' ');
-    let [hours, minutes] = time.split(':');
-    let hour = parseInt(hours, 10);
-    if (ampm.toLowerCase() === 'pm' && hour !== 12) {
-      hour += 12;
-    } else if (ampm.toLowerCase() === 'am' && hour === 12) {
-      hour = 0;
-    }
-    return `${hour.toString().padStart(2, '0')}:${minutes}`;
+    const result = `${hour12}:${minutes} ${ampm}`;
+    console.log('🔄 Conversion result:', time24, '->', result);
+    return result;
   };
 
 
@@ -160,13 +241,12 @@ export default function AppointmentScreen() {
 
   const handleBookAppointment = async (paymentMethod: string) => {
     if (!selectedBarber || !selectedService || !selectedTime || !date) {
-      Alert.alert('Validation Error', 'Please fill in all fields');
+      Alert.alert('Validation Error', 'Please select a barber, service, date, and time');
       return;
     }
 
     const bookingStartTime = Date.now();
     setIsBooking(true);
-    setBookingStep('Validating appointment details...');
 
     try {
       console.log('🚀 Starting appointment booking process...');
@@ -178,12 +258,11 @@ export default function AppointmentScreen() {
         payment: paymentMethod
       });
 
-      setBookingStep('Saving appointment...');
       const result = await insertDropdownSelection({
         barber_id: selectedBarber.label,
         service_id: selectedService.name,
         sched_date: date.toISOString().split('T')[0],
-        sched_time: convertTo24HourFormat(selectedTime),
+        sched_time: selectedTime, // Keep 12-hour format as selected
         subtotal,
         appointment_fee: appointmentFee,
         total,
@@ -208,7 +287,6 @@ export default function AppointmentScreen() {
           console.error('❌ Failed to insert notification:', notificationResult.error);
         }
 
-        setBookingStep('Appointment booked successfully!');
         setModalVisible(true);
       } else {
         throw new Error((result.error as any)?.message || 'Failed to book appointment');
@@ -218,29 +296,26 @@ export default function AppointmentScreen() {
       Alert.alert('Booking Error', 'Failed to book appointment. Please try again.');
     } finally {
       setIsBooking(false);
-      setBookingStep('');
     }
   };
 
   const handlePayInPerson = async () => {
     if (!selectedBarber || !selectedService || !selectedTime || !date) {
-      Alert.alert('Validation Error', 'Please fill in all fields');
+      Alert.alert('Validation Error', 'Please select a barber, service, date, and time');
       return;
     }
 
     const bookingStartTime = Date.now();
     setIsBooking(true);
-    setBookingStep('Processing cash payment...');
 
     try {
       console.log('🚀 Starting cash payment appointment booking...');
-      setBookingStep('Saving appointment...');
 
       const result = await insertDropdownSelection({
         barber_id: selectedBarber.label,
         service_id: selectedService.name,
         sched_date: date.toISOString().split('T')[0],
-        sched_time: convertTo24HourFormat(selectedTime),
+        sched_time: selectedTime, // Keep 12-hour format as selected
         subtotal,
         appointment_fee: appointmentFee,
         total,
@@ -265,7 +340,6 @@ export default function AppointmentScreen() {
           console.error('❌ Failed to insert notification:', notificationResult.error);
         }
 
-        setBookingStep('Appointment booked successfully!');
         setModalVisible(true);
       } else {
         throw new Error((result.error as any)?.message || 'Failed to book appointment');
@@ -275,9 +349,10 @@ export default function AppointmentScreen() {
       Alert.alert('Booking Error', 'Failed to book appointment. Please try again.');
     } finally {
       setIsBooking(false);
-      setBookingStep('');
     }
   };
+
+  const styles = createStyles(width, height);
 
   return (
     <View style={styles.container}>
@@ -293,11 +368,19 @@ export default function AppointmentScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Barber Info */}
         <View style={[styles.dayOff, styles.boxShadow]}>
-          <Image source={require('../../../assets/img/DSC_0332.jpg')} style={styles.dayOffImage} />
+          <View style={styles.dayOffImageContainer}>
+            {employeePhoto ? (
+              <Image source={{ uri: employeePhoto }} style={styles.dayOffImage} />
+            ) : (
+              <View style={styles.dayOffImagePlaceholder}>
+                <Ionicons name="person" size={width * 0.15} color="#666" />
+              </View>
+            )}
+          </View>
           <View style={styles.dayOffContent}>
-            <Text style={styles.dayOffText}>Name: {employeeName || 'Almer N. Jaquez'}</Text>
-            <Text style={styles.dayOffText}>Expertise: {employeeExpertise || 'Haircut'}</Text>
-            <Text style={styles.dayOffText}>Rest Day: {employeeRestDay || 'Sunday'}</Text>
+            <Text style={styles.dayOffText}>Name: {employeeName}</Text>
+            <Text style={styles.dayOffText}>Expertise: {employeeExpertise}</Text>
+            <Text style={styles.dayOffText}>Day Off: {employeeRestDay}</Text>
           </View>
         </View>
 
@@ -310,7 +393,7 @@ export default function AppointmentScreen() {
         <Services onSelect={handleServiceSelect} />
 
         {/* Date Picker */}
-        <Text style={styles.sectionTitle}>Choose a date</Text>
+        <Text style={[styles.sectionTitle, {bottom: 20}]}>Choose a date</Text>
         <TouchableOpacity style={styles.dateButton} onPress={toggleDatePicker}>
           <Text style={styles.dateButtonText}>{date ? formatDate(date) : 'Choose a date'}</Text>
           <AntDesign name="calendar" size={20} color="#666" />
@@ -334,7 +417,10 @@ export default function AppointmentScreen() {
             <Ionicons name="information-circle-outline" size={18} color="black" />
           </Pressable>
         </View>
-        <TimeSelector onTimeSelect={setSelectedTime} />
+        <TimeSelector onTimeSelect={setSelectedTime} disabledTimes={disabledTimes} bookedUsers={bookedUsers} />
+
+
+
 
         {/* Name Display */}
         <View style={styles.infoDisplayContainer}>
@@ -446,7 +532,7 @@ export default function AppointmentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (width: number, height: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -487,11 +573,21 @@ const styles = StyleSheet.create({
     shadowRadius: 10, // Adjusted
     elevation: 5, // Android shadow
   },
+  dayOffImageContainer: {
+    marginRight: 15,
+  },
   dayOffImage: {
     width: width * 0.25, // Responsive width
     height: width * 0.25, // Responsive height (square)
-    borderRadius: (width * 0.25) / 2, // Make it a circle
-    marginRight: 15, // Use marginRight for spacing
+    borderRadius: (width * 0.25) / 2, // Make it circular
+  },
+  dayOffImagePlaceholder: {
+    width: width * 0.25, // Responsive width
+    height: width * 0.25, // Responsive height (square)
+    borderRadius: (width * 0.25) / 2, // Make it circular
+    backgroundColor: '#f0f0f0', // Light gray background
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayOffContent: {
     flex: 1, // Allow content to take remaining space
@@ -527,6 +623,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    bottom: 20
   },
   dateButtonText: {
     fontSize: 16,
@@ -655,6 +752,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Satoshi-Regular',
     color: '#666',
+    textAlign: 'center',
+  },
+  selectedTimeContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    alignSelf: 'center',
+    width: '90%',
+  },
+  selectedTimeText: {
+    fontSize: 16,
+    fontFamily: 'Satoshi-Bold',
+    color: '#333',
     textAlign: 'center',
   },
 });

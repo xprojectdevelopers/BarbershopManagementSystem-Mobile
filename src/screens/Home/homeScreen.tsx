@@ -7,7 +7,7 @@ import {
   ScrollView,
   BackHandler,
   Linking,
-  Dimensions
+  useWindowDimensions
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { getProfileById } from '../../lib/supabase/profileFunctions';
 import { getUserBadge } from '../../lib/supabase/badgeFunctions';
+import { supabase } from '../../lib/supabase/client';
 import MonthlyAnnouncement from '../../components/Carousel/monthlyAnnouncement';
 
 // Components
@@ -34,19 +35,10 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
   'Home'
 >;
 
-// Get device dimensions
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Responsive scaling functions
-const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
-const verticalScale = (size: number) => (SCREEN_HEIGHT / 812) * size;
-const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
-
-// Responsive dimensions
-const CARD_WIDTH = SCREEN_WIDTH * 0.8;
-const CARD_HEIGHT = CARD_WIDTH * 1.17; // Maintain aspect ratio
 
 export default function HomeScreen() {
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState('Home');
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
   const [userBadge, setUserBadge] = useState<string>('None');
@@ -54,6 +46,15 @@ export default function HomeScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+
+  // Responsive scaling functions
+  const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
+  const verticalScale = (size: number) => (SCREEN_HEIGHT / 812) * size;
+  const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+  // Responsive dimensions
+  const CARD_WIDTH = SCREEN_WIDTH * 0.8;
+  const CARD_HEIGHT = CARD_WIDTH * 1.17; // Maintain aspect ratio
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -85,6 +86,31 @@ export default function HomeScreen() {
       }
     };
     fetchUserBadge();
+
+    // Set up real-time subscription for badge changes
+    if (user?.id) {
+      const channel = supabase
+        .channel('badge_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_badges',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            if (payload.new && payload.new.badge_name) {
+              setUserBadge(payload.new.badge_name);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
 
   useEffect(() => {
@@ -107,6 +133,20 @@ export default function HomeScreen() {
     setActiveTab(tab);
   };
 
+  const getBadgeStyle = (badgeName: string) => {
+    return {
+      backgroundColor: '#000000ff',
+      borderRadius: moderateScale(20),
+      paddingVertical: verticalScale(6),
+      paddingHorizontal: scale(10),
+      marginLeft: scale(20),
+      marginTop: verticalScale(8),
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      alignSelf: 'flex-start' as const,
+    };
+  };
+
   const renderHomeContent = () => (
     <ScrollView
       style={styles.scrollView}
@@ -123,7 +163,7 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
         {(userBadge === 'Rookie' || userBadge === 'Loyal Customer' || userBadge === 'Molave Street Legend') && (
-          <View style={styles.badges}>
+          <View style={getBadgeStyle(userBadge)}>
             <Text style={styles.badgeText}>{userBadge}</Text>
           </View>
         )}
@@ -236,6 +276,8 @@ export default function HomeScreen() {
     }
   };
 
+  const styles = createStyles(scale, verticalScale, moderateScale, SCREEN_WIDTH, CARD_WIDTH, CARD_HEIGHT);
+
   return (
     <View style={styles.container}>
       {/* Main Content */}
@@ -249,7 +291,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (scale: (size: number) => number, verticalScale: (size: number) => number, moderateScale: (size: number) => number, SCREEN_WIDTH: number, CARD_WIDTH: number, CARD_HEIGHT: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',

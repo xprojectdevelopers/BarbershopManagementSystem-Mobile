@@ -6,7 +6,7 @@ export interface Employee {
   Employee_Role: string;
   expertise: string;
   work_sched: string[];
-  photo: string;
+  Photo: string;
 }
 
 // Get employee by ID
@@ -24,10 +24,10 @@ export async function getEmployeeById(id: string): Promise<{ success: boolean; d
     }
 
     // If photo exists, get the public URL from storage
-    if (data.photo) {
+    if (data.Photo) {
       const { data: photoUrl } = supabase.storage
         .from('barbers_bucket')
-        .getPublicUrl(data.photo);
+        .getPublicUrl(data.Photo);
       data.photo = photoUrl.publicUrl;
     }
 
@@ -52,10 +52,10 @@ export async function getAllEmployees(): Promise<{ success: boolean; data?: Empl
 
     // Process photos for each employee
     const processedData = data.map(employee => {
-      if (employee.photo) {
+      if (employee.Photo) {
         const { data: photoUrl } = supabase.storage
           .from('barbers_bucket')
-          .getPublicUrl(employee.photo);
+          .getPublicUrl(employee.Photo);
         employee.photo = photoUrl.publicUrl;
       }
       return employee;

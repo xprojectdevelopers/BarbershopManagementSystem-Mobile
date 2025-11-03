@@ -13,4 +13,5 @@ export type RootStackParamList = {
   About: undefined;
   HairContent: undefined;
   UserList: undefined;
+
 };

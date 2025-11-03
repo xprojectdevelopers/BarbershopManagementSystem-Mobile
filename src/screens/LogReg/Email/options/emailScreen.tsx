@@ -72,7 +72,7 @@ export default function EmailScreen({
               {error}
             </Text>
           )}
-          <Text style={styles.confirmationText}>You&apos;ll need to confirm this email later</Text>
+          <Text style={styles.confirmationText}>This email verifies your MLV ST account</Text>
           <TouchableOpacity 
             onPress={handleNext} 
             disabled={loading || !email} 

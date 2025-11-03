@@ -14,13 +14,29 @@ export async function getUserBadge(userId: string): Promise<{ success: boolean; 
     const { data, error } = await supabase
       .from('badge_tracker')
       .select('*')
-      .eq('user_id', userId)
+      .eq('customer_id', userId)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        // No rows returned, user has no badge
-        return { success: true, data: { id: '', userId: userId, completed_count: 0, badge_name: 'None', updated_at: '' } };
+        // No rows returned, create a new badge for the user
+        const insertResult = await updateUserBadge(userId, 0, 'None');
+        if (insertResult.success) {
+          // Fetch the newly created badge
+          const { data: newData, error: fetchError } = await supabase
+            .from('badge_tracker')
+            .select('*')
+            .eq('customer_id', userId)
+            .single();
+          if (fetchError) {
+            console.error('Error fetching newly created badge:', fetchError);
+            return { success: false, error: fetchError };
+          }
+          return { success: true, data: newData };
+        } else {
+          console.error('Error creating new badge for user:', insertResult.error);
+          return { success: false, error: insertResult.error };
+        }
       }
       console.error('Error fetching user badge:', error);
       return { success: false, error };
@@ -40,7 +56,7 @@ export async function updateUserBadge(userId: string, completedCount: number, ba
       .from('badge_tracker')
       .upsert([
         {
-          user_id: userId,
+          customer_id: userId,
           completed_count: completedCount,
           badge_name: badgeName,
         },

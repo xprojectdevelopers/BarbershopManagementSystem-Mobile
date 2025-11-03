@@ -21,9 +21,15 @@ const timeSlots: TimeSlot[] = [
   { id: 12, time: '7:30 pm' },
 ];
 
+interface BookedUser {
+  time: string;
+  user: string;
+}
+
 interface TimeSelectorProps {
   onTimeSelect?: (time: string) => void;
   disabledTimes?: string[];
+  bookedUsers?: BookedUser[];
 }
 
 // Get screen width for responsive calculations
@@ -34,7 +40,7 @@ const numColumns = 3;
 const horizontalPadding = 10; // Padding from the edges of the parent wrapper
 const buttonMargin = 10; // Space between buttons
 
-export default function TimeSelector({ onTimeSelect, disabledTimes = [] }: TimeSelectorProps) {
+export default function TimeSelector({ onTimeSelect, disabledTimes = [], bookedUsers = [] }: TimeSelectorProps) {
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
 
   const handleTimeSelection = (timeSlot: TimeSlot) => {
@@ -77,21 +83,30 @@ export default function TimeSelector({ onTimeSelect, disabledTimes = [] }: TimeS
     return styles.selectorText;
   };
 
+  const getBookedUser = (time: string) => {
+    const booked = bookedUsers.find(b => b.time === time);
+    return booked ? booked.user : null;
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.gridContainer}>
-        {timeSlots.map((timeSlot) => (
-          <TouchableOpacity
-            key={timeSlot.id}
-            style={getButtonStyle(timeSlot)}
-            onPress={() => handleTimeSelection(timeSlot)}
-            disabled={disabledTimes.includes(timeSlot.time)}
-          >
-            <Text style={getTextStyle(timeSlot)}>
-              {timeSlot.time}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {timeSlots.map((timeSlot) => {
+          const bookedUser = getBookedUser(timeSlot.time);
+          return (
+            <TouchableOpacity
+              key={timeSlot.id}
+              style={getButtonStyle(timeSlot)}
+              onPress={() => handleTimeSelection(timeSlot)}
+              disabled={disabledTimes.includes(timeSlot.time)}
+            >
+              <Text style={getTextStyle(timeSlot)}>
+                {timeSlot.time}
+              </Text>
+
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -110,7 +125,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: horizontalPadding, // Add padding inside the grid
   },
   selectorBase: { // Common styles for all selectors
-    height: 40,
+    height: 50,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -144,4 +159,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     color: '#999',
   },
+
 });

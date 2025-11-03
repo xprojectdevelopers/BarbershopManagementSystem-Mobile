@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Linking, ActivityIndicator } from 'react-native'
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Linking, ActivityIndicator, useWindowDimensions } from 'react-native'
 import React, { useState } from 'react'
 
 //icons
@@ -24,39 +24,55 @@ export default function ContactNum({
   goBack,
   loading
 }: ContactNumProps) {
-const [formatError, setFormatError] = useState('');
+  const { width, height } = useWindowDimensions();
+  const [formatError, setFormatError] = useState('');
 
-const formatPhoneNumber = (input: string) => {
-  const digits = input.replace(/\D/g, '');
-  const limitedDigits = digits.slice(0, 10);
-  return limitedDigits;
-}
+  // Responsive helper functions
+  const wp = (percentage: number) => {
+    return (width * percentage) / 100;
+  };
+
+  const hp = (percentage: number) => {
+    return (height * percentage) / 100;
+  };
+
+  const fs = (percentage: number) => {
+    return (width * percentage) / 100;
+  };
+
+  const formatPhoneNumber = (input: string) => {
+    const digits = input.replace(/\D/g, '');
+    const limitedDigits = digits.slice(0, 11);
+    return limitedDigits;
+  }
 
   const handlePhoneNumberChange = (text: string) => {
     const formatted = formatPhoneNumber(text);
     setContactNumber(formatted);
 
     const digits = text.replace(/\D/g, '');
-    if(digits.length > 0 && digits.length !== 10) {
-      setFormatError('Phone number must be exactly 10 digits');
+    if(digits.length > 0 && digits.length !== 11) {
+      setFormatError('Phone number must be exactly 11 digits');
     } else {
       setFormatError('')
     }
   }
 
   const SquareCheckbox = ({ isChecked, onToggle }: any) => (
-    <TouchableOpacity style={styles.checkboxContainer} onPress={onToggle} disabled={loading}> {/* Added disabled prop */}
+    <TouchableOpacity style={styles.checkboxContainer} onPress={onToggle} disabled={loading}>
       <View style={[styles.squareCheckbox, isChecked && styles.squareCheckboxChecked]}>
-        {isChecked && <Ionicons name="checkmark" size={16} color="white" />}
+        {isChecked && <Ionicons name="checkmark" size={wp(4)} color="white" />}
       </View>
     </TouchableOpacity>
   );
+
+  const styles = createStyles(wp, hp, fs);
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
         <TouchableOpacity onPress={goBack} style={styles.backBtn}>
-          <AntDesign name="arrow-left" size={28} color="black" />
+          <AntDesign name="arrow-left" size={wp(7)} color="black" />
         </TouchableOpacity>
 
         <Text style={styles.title}>Let's finish up!</Text>
@@ -71,17 +87,17 @@ const formatPhoneNumber = (input: string) => {
                 keyboardType='phone-pad'
                 autoCapitalize='none'
                 autoCorrect={false}
-                style={[styles.phoneInput, {borderColor: formatError ? "#ef4444" : "#e5e7eb", borderWidth: 1}]} 
+                style={[styles.phoneInput, {borderColor: formatError ? "#ef4444" : "#e5e7eb", borderWidth: 1}]}
                 value={contactNumber}
                 onChangeText={handlePhoneNumberChange}
                 editable={!loading}
                 returnKeyType='done'
                 onSubmitEditing={handleSubmit}
-                maxLength={10}
+                maxLength={11}
               />
             </View>
             {formatError ? (
-                 <Text style={styles.errorText}> {/* Added errorText style */}
+                 <Text style={styles.errorText}>
                    {formatError}
                  </Text>
                ) : (
@@ -100,7 +116,7 @@ const formatPhoneNumber = (input: string) => {
               />
               <View style={styles.termsTextContainer}>
                 <Text style={styles.termsText}>
-                  <Text> {/* Added a Text wrapper to hold TouchableOpacity for proper inline display */}
+                  <Text>
                     <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app')} >
                       <Text style={styles.linkText}>Molave Street Barbers</Text>
                     </TouchableOpacity>
@@ -113,13 +129,13 @@ const formatPhoneNumber = (input: string) => {
             <View>
               <Text style={styles.termsText}>
                 By clicking Create Account, you agree to the{' '}
-                <Text> {/* Added a Text wrapper */}
+                <Text>
                   <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app/terms')}>
                     <Text style={styles.linkText}>Terms of Service</Text>
                   </TouchableOpacity>
                 </Text>
                 {' '}and{' '}
-                <Text> {/* Added a Text wrapper */}
+                <Text>
                   <TouchableOpacity onPress={() => Linking.openURL('https://molavestreetbarbers.vercel.app/privacy')}>
                     <Text style={styles.linkText}>Privacy Policy</Text>
                   </TouchableOpacity>
@@ -132,8 +148,8 @@ const formatPhoneNumber = (input: string) => {
           {/* Continue Button */}
           <TouchableOpacity
             onPress={handleSubmit}
-            style={[styles.continueBtn, { opacity: (loading || !contactNumber || formatError || !isChecked) ? 0.5 : 1 }]} 
-            disabled={loading || !contactNumber || formatError || !isChecked}
+            style={[styles.continueBtn, { opacity: (loading || !contactNumber || formatError || !isChecked) ? 0.5 : 1 }]}
+            disabled={Boolean(loading || !contactNumber || formatError || !isChecked)}
           >
             {loading ? (
               <ActivityIndicator color="white" />
@@ -147,42 +163,43 @@ const formatPhoneNumber = (input: string) => {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (wp: (p: number) => number, hp: (p: number) => number, fs: (p: number) => number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: wp(5),
   },
   backBtn: {
     position: 'absolute',
-    top: 50,
-    left: 20,
-    zIndex: 1, // Ensure back button is above other content
+    top: hp(6),
+    left: wp(5),
+    zIndex: 1,
   },
   title: {
-    position: 'absolute', // Keep absolute to allow other content to flow around it
-    top: 120,
-    width: '100%', // Take full width to center text
+    position: 'absolute',
+    top: hp(10),
+    left: wp(2.5),
+    width: '100%',
     textAlign: 'center',
-    fontSize: 28,
+    fontSize: fs(7),
     fontFamily: 'Satoshi-Bold'
   },
   formContainer: {
     flex: 1,
-    paddingTop: 150,
+    paddingTop: hp(19),
     justifyContent: 'space-between',
-    paddingBottom: 20, // Reduced from 400 to a more reasonable spacing above the button
+    paddingBottom: hp(2.5),
   },
   contactSection: {
-    marginBottom: 30,
+    marginBottom: hp(3.5),
   },
   label: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    marginBottom: 8,
+    fontSize: fs(4),
+    marginBottom: hp(1),
     color: '#1f2937',
   },
   phoneInputContainer: {
@@ -193,47 +210,41 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#cacacaff',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.8),
     fontFamily: 'Satoshi-Medium',
-    fontSize: 16,
+    fontSize: fs(4),
     color: '#000000',
-    borderWidth: 1, // Added for formatError consistency
-    borderColor: '#e5e7eb', // Default border color
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   helperText: {
-    fontSize: 12,
+    fontSize: fs(3),
     color: '#6b7280',
-    marginTop: 8,
+    marginTop: hp(1),
     fontFamily: 'Satoshi-Regular',
   },
-  errorText: { // Added for the formatError message
-    fontSize: 12,
+  errorText: {
+    fontSize: fs(3),
     color: "#ef4444",
-    marginTop: 8,
+    marginTop: hp(1),
     fontFamily: 'Satoshi-Regular',
   },
   termsSection: {
-    // Original marginBottom: 420. This is a very large space.
-    // To position the button near the bottom, and have content fill space,
-    // we manage the space with `formContainer`'s `justifyContent: 'space-between'`
-    // and its `paddingBottom`. If this was truly desired, it would push everything far up.
-    // I've removed it as it makes the layout illogical with `justifyContent: 'space-between'`.
-    // The previous large bottom was likely an attempt to position the button.
-    // Let's rely on formContainer's justify-content and paddingBottom.
+    bottom: hp(22)
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: hp(2.5),
   },
   checkboxContainer: {
-    marginRight: 12,
-    marginTop: 2,
+    marginRight: wp(3),
+    marginTop: hp(0.25),
   },
   squareCheckbox: {
-    width: 20,
-    height: 20,
+    width: wp(5),
+    height: wp(5),
     borderWidth: 2,
     borderColor: '#6b7280',
     borderRadius: 4,
@@ -249,30 +260,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   termsText: {
-    fontSize: 14,
+    fontSize: fs(3.5),
     color: '#374151',
     fontFamily: 'Satoshi-Regular',
-    lineHeight: 20,
-    // REMOVED: bottom: 10. This was causing vertical alignment issues.
+    lineHeight: hp(4),
   },
   linkText: {
     fontFamily: 'Satoshi-Bold',
-    color: '#000000', // Ensure link text is black as per the implied design
-    // REMOVED: top: 5. This was causing vertical alignment issues.
+    color: '#000000',
+    fontSize: fs(3.5),
+    textDecorationLine: 'underline',
   },
   continueBtn: {
     backgroundColor: '#000000',
-    paddingVertical: 16,
+    paddingVertical: hp(2),
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%', // Ensure button takes full width within content padding
-    // REMOVED: bottom: 400. This was an absolute position that conflicted with flexbox layout.
-    // The button will now be positioned at the bottom by `formContainer`'s `justifyContent: 'space-between'`.
+    width: '100%',
+    bottom: hp(40),
   },
   continueButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: fs(4),
     fontFamily: 'Satoshi-Bold',
   },
 });

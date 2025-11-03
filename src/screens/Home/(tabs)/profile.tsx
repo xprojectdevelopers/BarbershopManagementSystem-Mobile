@@ -8,6 +8,7 @@ import {
   StatusBar,
   Image,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../types/navigations';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getProfileById, CustomerProfile, uploadProfileImage } from '../../../lib/supabase/profileFunctions';
+import { getUserBadge, BadgeTracker } from '../../../lib/supabase/badgeFunctions';
 
 import ChangePasswordModal from '../../../components/Modals/changePassword';
 import AccountInfoModal from '../../../components/Modals/accountInfo';
@@ -41,6 +43,7 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [badge, setBadge] = useState<BadgeTracker | null>(null);
 
   const navigation = useNavigation<ProfileSettingsScreenNavigationProp>();
   const { signOut, user } = useAuth();
@@ -53,6 +56,12 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
         if (success && data !== undefined) {
           setProfile(data);
           setProfileImageUri(data.profile_image_url || null);
+        }
+
+        // Fetch badge data
+        const badgeResult = await getUserBadge(user.id);
+        if (badgeResult.success && badgeResult.data) {
+          setBadge(badgeResult.data);
         }
       }
       setIsLoading(false);
@@ -213,22 +222,23 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
       iconLibrary: 'Ionicons' as const,
       hasSwitch: false,
     },
+
     {
-      id: 2,
+      id: 3,
       title: 'Change password',
       icon: 'lock-closed' as const,
       iconLibrary: 'Ionicons' as const,
       hasSwitch: false,
     },
     {
-      id: 3,
+      id: 4,
       title: 'Account Information',
       icon: 'person' as const,
       iconLibrary: 'Ionicons' as const,
       hasSwitch: false,
     },
     {
-      id: 4,
+      id: 5,
       title: 'Logout',
       icon: 'log-out-outline' as const,
       iconLibrary: 'Ionicons' as const,
@@ -250,7 +260,7 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
   };
 
   const getIconColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#ff4444'];
+    const colors = ['#000', '#000', '#000', '#000', '#ff4444'];
     return colors[index] || '#000';
   };
 
@@ -260,7 +270,7 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
   };
 
   const getTextColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#ff4444'];
+    const colors = ['#000', '#000', '#000', '#000', '#ff4444'];
     return colors[index] || '#000';
   };
 
@@ -317,11 +327,11 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
               onPress={() => {
                 if (item.id === 1) {
                   navigation.navigate('About');
-                } else if (item.id === 2) {
-                  setIsChangePasswordModalVisible(true);
                 } else if (item.id === 3) {
-                  setIsAccountInfoModalVisible(true);
+                  setIsChangePasswordModalVisible(true);
                 } else if (item.id === 4) {
+                  setIsAccountInfoModalVisible(true);
+                } else if (item.id === 5) {
                   handleLogout();
                 }
               }}
@@ -334,7 +344,7 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
               </View>
 
               <View style={styles.settingsItemRight}>
-                {index !== 3 && (
+                {index !== 4 && (
                   <View style={styles.rightContent}>
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                   </View>

@@ -5,7 +5,9 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Linking } from 'react-native'
+  Linking,
+  useWindowDimensions
+} from 'react-native'
 import React, {useState}from 'react'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -31,6 +33,7 @@ type EmailLoginNavigationProp = NativeStackNavigationProp<
 >;
 
 export default function EmailLogin() {
+  const { width, height } = useWindowDimensions();
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [emailError, setEmailError] = useState('')
@@ -41,6 +44,19 @@ export default function EmailLogin() {
   const navigation = useNavigation<EmailLoginNavigationProp>()
   const {signIn, loading: authLoading} = useAuth()
   const { refreshPushToken } = useNotification()
+
+  // Responsive helper functions
+  const wp = (percentage: number) => {
+    return (width * percentage) / 100;
+  };
+
+  const hp = (percentage: number) => {
+    return (height * percentage) / 100;
+  };
+
+  const fs = (percentage: number) => {
+    return (width * percentage) / 100;
+  };
 
   const handleLogin = async () => {
     setLoginStatus('loading')
@@ -132,16 +148,18 @@ export default function EmailLogin() {
     return styles.loginBtn
   }
 
+  const styles = createStyles(wp, hp, fs);
+
   return (
     <View style={{flex: 1}}>
       <TouchableOpacity onPress={() => navigation.navigate('LoginOptions')} style={styles.backBtn}>
-        <AntDesign name="arrow-left" size={34} color="black" />
+        <AntDesign name="arrow-left" size={wp(9)} color="black" />
       </TouchableOpacity>
       <Text style={styles.Title}>Welcome Back</Text>
       <View style={styles.container}>
         <View style={styles.loginForm}>
           <Text style={styles.emailText}>Email</Text>
-          <TextInput 
+          <TextInput
             placeholder='Enter your email'
             placeholderTextColor={'#505050ff'}
             autoCapitalize='none'
@@ -154,7 +172,7 @@ export default function EmailLogin() {
           />
           {emailError && <Text style={styles.errorText} >{emailError}</Text>}
           <Text style={styles.passwordText}>Password</Text>
-          <TextInput 
+          <TextInput
             placeholder='Enter your password'
             placeholderTextColor={'#505050ff'}
             autoCapitalize='none'
@@ -166,7 +184,7 @@ export default function EmailLogin() {
             editable={!authLoading && loginStatus !== 'loading'}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Entypo name={showPassword ? "eye-with-line" : "eye"} size={24} color="black" style={styles.eyeIcon} disabled={authLoading || loginStatus === 'loading'}/>
+            <Entypo name={showPassword ? "eye-with-line" : "eye"} size={wp(6)} color="black" style={styles.eyeIcon} disabled={authLoading || loginStatus === 'loading'}/>
           </TouchableOpacity>
           {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
           {networkError ? (
@@ -182,9 +200,9 @@ export default function EmailLogin() {
             {loginStatus === 'loading' ? (
               <ActivityIndicator color="white" />
             ) : loginStatus === 'success' ? (
-              <AntDesign name="check" size={24} color="white" />
+              <AntDesign name="check" size={wp(6)} color="white" />
             ) : loginStatus === 'error' ? (
-              <AntDesign name="close" size={24} color="white" />
+              <AntDesign name="close" size={wp(6)} color="white" />
             ) : (
               <Text style={styles.loginText}>Sign In</Text>
             )}
@@ -195,11 +213,11 @@ export default function EmailLogin() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (wp: (p: number) => number, hp: (p: number) => number, fs: (p: number) => number) => StyleSheet.create({
   backBtn: {
     position: 'absolute',
-    top: 50,
-    left: 20
+    top: hp(6),
+    left: wp(5)
   },
   container: {
     flex: 1,
@@ -207,97 +225,100 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   Title: {
-    top: 120,
+    top: hp(15),
     textAlign: 'center',
-    fontSize: 32,
+    fontSize: fs(8),
     fontFamily: 'Satoshi-Bold'
   },
   loginForm: {
-    bottom:130,
+    bottom: hp(16),
+    width: wp(90),
+    alignItems: 'stretch',
   },
   emailText: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    bottom: 5,
-    
+    fontSize: fs(4),
+    marginBottom: hp(0.6),
   },
   emailInput: {
-    padding: 15,
+    padding: wp(2),
     borderRadius: 10,
-    marginBottom: 10,
-    width: 350,
-    height: 50,
+    marginBottom: hp(1.2),
+    width: '100%',
+    height: hp(6),
     backgroundColor: '#cacacaff',
     fontFamily: 'Satoshi-Bold',
     color: '#000000ff',
+    fontSize: fs(3.8),
   },
   passwordText: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    bottom: 5,
-    marginTop: 10
+    fontSize: fs(4),
+    marginBottom: hp(0.6),
+    marginTop: hp(1.2)
   },
   passwordInput: {
-    padding: 15,
+    padding: wp(2),
     borderRadius: 10,
-    width: 350,
-    height: 50,
+    width: '100%',
+    height: hp(6),
     backgroundColor: '#cacacaff',
     fontFamily: 'Satoshi-Bold',
     color: '#000000ff',
+    fontSize: fs(3.8),
   },
   eyeIcon: {
     position: 'absolute',
-    right: 20,
-    bottom: 13
+    right: wp(5),
+    bottom: hp(1.2)
   },
   forgotPasswordText: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 14,
-    marginTop: 10
+    fontSize: fs(3.5),
+    marginTop: hp(1.2)
   },
   loginBtn: {
     backgroundColor: 'black',
-    padding: 10,
+    padding: wp(2.6),
     borderRadius: 30,
-    top: 15,
-    width: 350,
-    height: 50,
+    marginTop: hp(1.8),
+    width: '100%',
+    height: hp(6),
     alignItems: 'center',
     justifyContent: 'center',
   },
   loginBtnDisabled: {
     backgroundColor: '#b0b0b0',
-    padding: 10,
+    padding: wp(2.6),
     borderRadius: 30,
-    top: 15,
-    width: 350,
-    height: 50,
+    marginTop: hp(1.8),
+    width: '100%',
+    height: hp(6),
     alignItems: 'center',
     justifyContent: 'center',
   },
   loginBtnSuccess: {
     backgroundColor: 'green',
-    padding: 10,
+    padding: wp(2.6),
     borderRadius: 30,
-    top: 15,
-    width: 350,
-    height: 50,
+    marginTop: hp(1.8),
+    width: '100%',
+    height: hp(6),
     alignItems: 'center',
     justifyContent: 'center',
   },
   loginBtnError: {
     backgroundColor: 'red',
-    padding: 10,
+    padding: wp(2.6),
     borderRadius: 30,
-    top: 15,
-    width: 350,
-    height: 50,
+    marginTop: hp(1.8),
+    width: '100%',
+    height: hp(6),
     alignItems: 'center',
     justifyContent: 'center',
   },
   loginText: {
-    fontSize: 16,
+    fontSize: fs(4),
     color: 'white',
     textAlign: 'center',
     fontFamily: 'Satoshi-Bold',
@@ -305,12 +326,13 @@ const styles = StyleSheet.create({
 
   errorText: {
     color: 'red',
-    marginTop: 5,
+    marginTop: hp(0.6),
     textAlign: 'center',
+    fontSize: fs(3.5),
   },
   errorContainer: {
-    marginTop: 10,
-    padding: 10,
+    marginTop: hp(1.2),
+    padding: wp(2.6),
     backgroundColor: '#f8d7da',
     borderRadius: 5,
   },

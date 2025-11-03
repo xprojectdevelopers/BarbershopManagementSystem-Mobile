@@ -29,7 +29,7 @@ export default function BarberName({ onSelect }: BarberNameProps) {
 
       if (result.success && result.data) {
         const barbers = result.data
-          .filter((employee: any) => employee.Employee_Role === 'Barber')
+          .filter((employee: any) => employee.Employee_Role?.toLowerCase() === 'barber')
           .map((employee: any) => ({
             id: employee.id,
             label: `${employee.Full_Name} - Barber`,

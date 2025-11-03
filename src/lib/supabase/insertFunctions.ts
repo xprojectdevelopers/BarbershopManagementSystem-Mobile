@@ -85,6 +85,11 @@ export async function insertDropdownSelection(data: InsertData) {
     const customerName = profile?.display_name ?? profile?.username ?? null;
     const contactNumber = profile?.contact_number ?? null;
 
+    // Get user badge
+    const { getUserBadge } = await import('./badgeFunctions');
+    const badgeResult = await getUserBadge(user.id);
+    const customerBadge = badgeResult.success ? badgeResult.data?.badge_name ?? 'None' : 'None';
+
     const { data: insertedData, error } = await supabase
       .from('appointment_sched')
       .insert([
@@ -96,7 +101,7 @@ export async function insertDropdownSelection(data: InsertData) {
           sched_time: data.sched_time ?? null,
           customer_name: customerName,
           contact_number: contactNumber,
-          customer_badge: data.customer_badge ?? null,
+          customer_badge: customerBadge,
           subtotal: data.subtotal ?? null,
           appointment_fee: data.appointment_fee ?? null,
           total: data.total ?? null,

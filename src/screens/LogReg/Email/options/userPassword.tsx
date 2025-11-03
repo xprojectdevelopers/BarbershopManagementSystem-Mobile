@@ -34,6 +34,7 @@ interface EmailPasswordScreenProps {
   goBack: () => void
   loading: boolean
   error?: string
+  passwordError?: string
 }
 
 export default function UserPassword({
@@ -46,7 +47,8 @@ export default function UserPassword({
   handleNext,
   goBack,
   loading,
-  error
+  error,
+  passwordError
 }: EmailPasswordScreenProps) {
   
   return (
@@ -73,25 +75,32 @@ export default function UserPassword({
               {error}
             </Text>
           )}
-          <Text style={styles.displayNameInfoText}>This will be your public name</Text>
+          <Text style={styles.displayNameInfoText}>This is the name that will appear on your profile.</Text>
           
           <Text style={styles.labelText}>Password</Text> {/* Changed to labelText */}
-          <TextInput 
-            placeholder='Enter your password'
-            placeholderTextColor={'#505050ff'}
-            autoCapitalize='none'
-            autoCorrect={false}
-            style={[styles.inputField, styles.passwordInputField]} // Re-used inputField, added specific override
-            secureTextEntry={!showPassword}
-            value={password}
-            onChangeText={setPassword}
-            editable={!loading}
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              placeholder='Enter your password'
+              placeholderTextColor={'#505050ff'}
+              autoCapitalize='none'
+              autoCorrect={false}
+              style={[styles.inputField, styles.passwordInputField, {borderColor: passwordError ? "#ef4444" : "#e5e7eb"}]} // Re-used inputField, added specific override
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              editable={!loading}
+            />
+            <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeBtn}>
+              <Entypo name={showPassword ? "eye-with-line" : "eye"} size={responsiveFontSize(24)} color="black" />
+            </TouchableOpacity>
+          </View>
+          {passwordError && (
+            <Text style={styles.errorText}>
+              {passwordError}
+            </Text>
+          )}
           <Text style={styles.passwordInfoText}>Use at least 8 characters with letters, numbers and special character.</Text>
-          <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeBtn}>
-            <Entypo name={showPassword ? "eye-with-line" : "eye"} size={responsiveFontSize(24)} color="black" />
-          </TouchableOpacity>
-           <TouchableOpacity onPress={handleNext} disabled={loading || !displayName || !password } style={[styles.continueBtn, {opacity: (!displayName || !password || loading) ? 0.5 : 1,}]}>
+           <TouchableOpacity onPress={handleNext} disabled={loading || !displayName || !password || !!passwordError} style={[styles.continueBtn, {opacity: (!displayName || !password || loading || !!passwordError) ? 0.5 : 1,}]}>
             {loading ? (
              <ActivityIndicator color="white" />
            ) : (
@@ -173,10 +182,15 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14), 
     marginTop: responsiveHeight(1),
   },
+  passwordContainer: {
+    position: 'relative',
+    width: '100%',
+  },
   eyeBtn: {
     position: 'absolute',
-    right: responsiveWidth(5), // Position relative to form width
-    top: responsiveHeight(21.5), // Adjust relative to password input position
+    right: responsiveWidth(3),
+    top: '50%',
+    transform: [{ translateY: -responsiveFontSize(12) }],
   },
   continueBtn: {
     backgroundColor: '#000000ff',

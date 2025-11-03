@@ -23,6 +23,7 @@ import About from './src/screens/profiles/about'
 import HairContent from './src/screens/Home/hairContent'
 import UserList from './src/screens/Home/userListScreen'
 
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // ✅ Notification handler — always show instantly
@@ -77,6 +78,7 @@ export default function App() {
             <Stack.Screen name="About" component={About} />
             <Stack.Screen name="HairContent" component={HairContent} />
             <Stack.Screen name="UserList" component={UserList} />
+
           </Stack.Navigator>
         </NavigationContainer>
       </NotificationProvider>

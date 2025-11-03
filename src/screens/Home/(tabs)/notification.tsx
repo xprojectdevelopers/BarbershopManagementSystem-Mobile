@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList, Modal, Pressable, ActivityIndicator } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList, Modal, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native'
 import React, { useState, useEffect, useRef } from 'react'
 
 //icons
@@ -71,6 +71,14 @@ const formatDate = (dateString: string) => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
+};
+
+const formatTime = (timeString: string | undefined) => {
+  if (!timeString) return '';
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
 };
 
 const formatStatus = (status: string): string => {
@@ -462,10 +470,10 @@ export default function Notification() {
            <View style={styles.appointmentDetails}>
             <Text style={styles.appointmentTitle}>Appointment Details</Text>
             <Text style={styles.appointmentNameText}>Name: {selectedAppointment?.customer_name}</Text>
-            <Text style={styles.appointmentBarberText}>Barber Name: {selectedAppointment ? getBarberName(selectedAppointment.barber_id) : ''}</Text>
-            <Text style={styles.appointmentServiceText}>Service: {selectedAppointment ? getServiceName(selectedAppointment.service_id) : ''}</Text>
+            <Text style={styles.appointmentBarberText}>Barber ID: {selectedAppointment?.barber_id}</Text>
+            <Text style={styles.appointmentServiceText}>Service ID: {selectedAppointment?.service_id}</Text>
             <Text style={styles.appointmentDateText}>Date: {selectedAppointment ? formatDate(selectedAppointment.sched_date) : ''}</Text>
-            <Text style={styles.appointmentTimeText}>Time: {selectedAppointment?.sched_time}</Text>
+            <Text style={styles.appointmentTimeText}>Time: {formatTime(selectedAppointment?.sched_time)}</Text>
             <Text style={styles.appointmentTotalText}>Total: {selectedAppointment?.total}</Text>
            </View>
             <View style={styles.receiptContainer}>
@@ -766,6 +774,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'black',
     top: 45,
+  },
+  receiptBarberText: {
+    fontFamily: 'Satoshi-Bold',
+    fontSize: 14,
+    color: 'black',
+    top: 5,
+  },
+  receiptServiceText: {
+    fontFamily: 'Satoshi-Bold',
+    fontSize: 14,
+    color: 'black',
+    top: 10,
   },
   receiptPayment1Text: {
     fontFamily: 'Satoshi-Bold',

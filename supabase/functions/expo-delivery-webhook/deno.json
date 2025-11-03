@@ -1,6 +1,0 @@
-{
-  "imports": {
-    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.75.0",
-    "expo-server-sdk": "npm:expo-server-sdk@^4.0.0"
-  }
-}
