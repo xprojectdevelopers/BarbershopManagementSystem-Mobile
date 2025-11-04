@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from 'react-native'
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native'
 import React, { useState, useEffect } from 'react'
-import { getAllEmployees } from '../../lib/supabase/employeeFunctions' 
+import { getAllEmployees } from '../../lib/supabase/employeeFunctions'
 
 interface BarberItem {
   id: string;
@@ -11,8 +11,6 @@ interface BarberItem {
 interface BarberNameProps {
   onSelect?: (item: BarberItem) => void;
 }
-
-const { width: screenWidth } = Dimensions.get('window');
 
 export default function BarberName({ onSelect }: BarberNameProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -25,14 +23,12 @@ export default function BarberName({ onSelect }: BarberNameProps) {
       setLoading(true);
       const result = await getAllEmployees();
 
-      // console.log("Employees fetched:", result.data);
-
       if (result.success && result.data) {
         const barbers = result.data
           .filter((employee: any) => employee.Employee_Role?.toLowerCase() === 'barber')
           .map((employee: any) => ({
             id: employee.id,
-            label: `${employee.Full_Name} - Barber`,
+            label: `${employee.Employee_Nickname} - Barber`,
             value: employee.id
           }));
         setDropDownItems(barbers);
@@ -82,12 +78,7 @@ export default function BarberName({ onSelect }: BarberNameProps) {
 
       {isOpen && (
         <View style={styles.dropdownContainer}>
-          <ScrollView
-            showsVerticalScrollIndicator={true}
-            style={styles.scrollView}
-            nestedScrollEnabled={true}
-            keyboardShouldPersistTaps="handled"
-          >
+          <ScrollView showsVerticalScrollIndicator={true} style={styles.scrollView} nestedScrollEnabled={true}>
             {dropDownItems.length > 0 ? (
               dropDownItems.map((item: BarberItem) => (
                 <TouchableOpacity
@@ -103,7 +94,6 @@ export default function BarberName({ onSelect }: BarberNameProps) {
                     style={[
                       styles.itemText,
                       selectedItem?.id === item.id && styles.selectedItemText,
-                      { backgroundColor: '#ffebcd20' }
                     ]}
                     numberOfLines={1}
                   >
@@ -147,6 +137,8 @@ const styles = StyleSheet.create({
     borderColor: '#000000ff',
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
   },
   buttonText: {
     fontSize: 16,
@@ -161,20 +153,25 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 10,
   },
+
   dropdownContainer: {
     backgroundColor: '#fff',
     borderWidth: 1,
+    borderColor: '#000',
     borderTopWidth: 0,
     width: '100%',
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     maxHeight: 200,
-    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
     elevation: 4,
-    position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
+    zIndex: 1,
   },
   scrollView: {
     flexGrow: 1,
@@ -187,6 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 44,
   },
   selected: {
     backgroundColor: '#ecececff',

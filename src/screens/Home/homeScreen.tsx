@@ -42,6 +42,7 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
   const [userBadge, setUserBadge] = useState<string>('None');
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const { user } = useAuth();
@@ -103,6 +104,48 @@ export default function HomeScreen() {
             if (payload.new && payload.new.badge_name) {
               setUserBadge(payload.new.badge_name);
             }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const fetchUnreadNotifications = async () => {
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('notification_loader')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('read', false);
+
+        if (error) {
+          console.error('Error fetching unread notifications:', error);
+        } else {
+          setUnreadNotifications(data?.length || 0);
+        }
+      }
+    };
+    fetchUnreadNotifications();
+
+    // Set up real-time subscription for notifications
+    if (user?.id) {
+      const channel = supabase
+        .channel('notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notification_loader',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            fetchUnreadNotifications(); // Refetch on any change
           }
         )
         .subscribe();
@@ -232,13 +275,17 @@ export default function HomeScreen() {
     </ScrollView>
   );
 
+  const handleUnreadNotificationsUpdate = (newCount: number) => {
+    setUnreadNotifications(newCount);
+  };
+
   const renderNotificationContent = () => (
     <ScrollView
       style={styles.scrollView}
       contentContainerStyle={{ paddingBottom: verticalScale(120) + insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
-      <Notification />
+      <Notification onUnreadUpdate={handleUnreadNotificationsUpdate} />
     </ScrollView>
   );
 
@@ -248,7 +295,7 @@ export default function HomeScreen() {
       if (profileResult.success && profileResult.data?.profile_image_url) {
         setProfileImageUri(profileResult.data.profile_image_url);
       } else {
-        setProfileImageUri(null);
+        setProfileImageUri(null)
       }
     }
   };
@@ -285,7 +332,7 @@ export default function HomeScreen() {
 
       {/* Fixed BottomTab */}
       <View style={[styles.bottomTabContainer, { bottom: insets.bottom }]}>
-        <BottomTab activeTab={activeTab} onTabPress={handleTabPress} />
+        <BottomTab activeTab={activeTab} onTabPress={handleTabPress} unreadNotifications={unreadNotifications} />
       </View>
     </View>
   );

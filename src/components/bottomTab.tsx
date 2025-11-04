@@ -9,26 +9,30 @@ import Feather from '@expo/vector-icons/Feather';
 interface BottomTabProps {
   activeTab: string;
   onTabPress: (tab: string) => void;
+  unreadNotifications?: number;
 }
 
-export default function BottomTab({ activeTab, onTabPress }: BottomTabProps) {
+export default function BottomTab({ activeTab, onTabPress, unreadNotifications }: BottomTabProps) {
   const tabs = [
     {
       key: 'Home',
       label: 'Home',
       icon: 'home',
+      activeIcon: 'home',
       IconComponent: SimpleLineIcons
     },
     {
       key: 'Notification',
       label: 'Notification',
       icon: 'bell-outline',
+      activeIcon: 'bell',
       IconComponent: MaterialCommunityIcons
     },
     {
       key: 'Profile',
       label: 'Profile',
       icon: 'user',
+      activeIcon: 'user',
       IconComponent: Feather
     }
   ];
@@ -41,17 +45,26 @@ export default function BottomTab({ activeTab, onTabPress }: BottomTabProps) {
           const IconComponent = tab.IconComponent;
           
           return (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={tab.key}
               style={styles.tabButton}
               onPress={() => onTabPress(tab.key)}
             >
-              <IconComponent
-                name={tab.icon as any}
-                size={25}
-                color={isActive ? '#000000ff' : '#666666'}
-                style={styles.tabIcon}
-              />
+              <View style={styles.iconContainer}>
+                <IconComponent
+                  name={((tab.key === 'Notification' && unreadNotifications && unreadNotifications > 0) ? tab.activeIcon : tab.icon) as any}
+                  size={25}
+                  color={isActive ? '#000000ff' : '#666666'}
+                  style={styles.tabIcon}
+                />
+                {tab.key === 'Notification' && unreadNotifications && unreadNotifications > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadNotifications > 99 ? '99+' : unreadNotifications.toString()}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={[
                 styles.bottomTabText,
                 { color: isActive ? '#000000ff' : '#666666' }
@@ -99,9 +112,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 4,
   },
+
   bottomTabText: {
     fontFamily: 'Satoshi-Bold', // Ensure this font is loaded in your project
     fontSize: 12,
+    textAlign: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontFamily: 'Satoshi-Bold',
     textAlign: 'center',
   }
 })

@@ -9,7 +9,7 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  useWindowDimensions, // Import useWindowDimensions
+  useWindowDimensions,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
@@ -20,7 +20,6 @@ import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProfileById } from '../../lib/supabase/profileFunctions';
 import { getEmployeeById } from '../../lib/supabase/employeeFunctions';
-// import { NotificationService } from '../../services/notificationService';
 
 // Icons
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -35,8 +34,6 @@ import AppointmentPayment from '../../components/Modals/appointmentPayment';
 import ToolTip1 from '../../components/Modals/Tooltips/toolTip1';
 import ToolTip2 from '../../components/Modals/Tooltips/toolTip2';
 import ToolTip3 from '../../components/Modals/Tooltips/tooTip3';
-
-// Get screen dimensions for responsiveness using useWindowDimensions
 
 interface BarberItem {
   id: string;
@@ -105,7 +102,7 @@ export default function AppointmentScreen() {
           setEmployeeExpertise(employeeResult.data.Employee_Role || 'undefined');
           setEmployeePhoto(employeeResult.data.Photo);
           const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-          const workDays = employeeResult.data.work_sched || [];
+          const workDays = employeeResult.data.dayOff || [];
           const restDays = allDays.filter(day => !workDays.includes(day));
           setEmployeeRestDay(restDays.length > 0 ? restDays.join(', ') : 'undefined');
           setRestDays(restDays);
@@ -120,41 +117,17 @@ export default function AppointmentScreen() {
       const fetchBookedTimes = async () => {
         try {
           const queryDate = date.toISOString().split('T')[0];
-          const queryBarberId = selectedBarber.label; // Use the barber's label (name) as stored in database
-
-          console.log('🔍 Fetching booked times for:', {
-            barberId: queryBarberId,
-            date: queryDate,
-            barberLabel: selectedBarber.label,
-            selectedBarberValue: selectedBarber.value
-          });
-
-          // First, let's check what columns exist in the table
-          const { data: allColumns, error: allError } = await supabase
-            .from('appointment_sched')
-            .select('*')
-            .limit(1);
-
-          console.log('🔍 Table structure check:', { allColumns, allError });
+          const queryBarberId = selectedBarber.label;
 
           const { data, error } = await supabase
             .from('appointment_sched')
             .select('*')
             .eq('barber_id', queryBarberId)
             .eq('sched_date', queryDate)
-            .neq('status', 'Cancelled'); // Exclude cancelled appointments
-
-          console.log('🔍 Checking barber_id match:', {
-            queryBarberId,
-            appointmentBarberId: data?.[0]?.barber_id,
-            matches: queryBarberId === data?.[0]?.barber_id
-          });
-
-          console.log('📊 Booked times query result:', { data, error, count: data?.length || 0 });
+            .neq('status', 'Cancelled');
 
           if (error) {
             console.error('Error fetching booked times:', error);
-            // If table doesn't exist or no data, just set empty arrays
             setDisabledTimes([]);
             setBookedUsers([]);
             return;
@@ -165,33 +138,21 @@ export default function AppointmentScreen() {
 
           if (data && data.length > 0) {
             data.forEach((appointment: any) => {
-              console.log('📅 Processing appointment:', appointment);
-
-              // Try different possible column names for time
               const timeValue = appointment.sched_time || appointment.time_sched || appointment.time || appointment.schedTime;
               const customerName = appointment.customer_name || appointment.customerName || appointment.name || 'Unknown';
 
-              console.log('⏰ Time value found:', timeValue);
-
               if (timeValue) {
                 const time12 = convertTo12HourFormat(timeValue);
-                console.log('⏰ Converted time:', timeValue, '->', time12);
-
                 bookedTimes.push(time12);
                 users.push({ time: time12, user: customerName });
-              } else {
-                console.log('❌ No time value found in appointment:', appointment);
               }
             });
           }
 
-          console.log('✅ Final disabled times:', bookedTimes);
-          console.log('✅ Final booked users:', users);
           setDisabledTimes(bookedTimes);
           setBookedUsers(users);
         } catch (err) {
           console.error('Unexpected error fetching booked times:', err);
-          // Set empty arrays on error
           setDisabledTimes([]);
           setBookedUsers([]);
         }
@@ -204,17 +165,12 @@ export default function AppointmentScreen() {
   }, [selectedBarber, date]);
 
   const convertTo12HourFormat = (time24: string) => {
-    console.log('🔄 Converting time:', time24);
     const [hours, minutes] = time24.split(':');
     const hour = parseInt(hours, 10);
     const ampm = hour >= 12 ? 'pm' : 'am';
     const hour12 = hour % 12 || 12;
-    const result = `${hour12}:${minutes} ${ampm}`;
-    console.log('🔄 Conversion result:', time24, '->', result);
-    return result;
+    return `${hour12}:${minutes} ${ampm}`;
   };
-
-
 
   const toggleDatePicker = () => setShowPicker(!showPicker);
 
@@ -249,20 +205,11 @@ export default function AppointmentScreen() {
     setIsBooking(true);
 
     try {
-      console.log('🚀 Starting appointment booking process...');
-      console.log('📅 Appointment details:', {
-        barber: selectedBarber.label,
-        service: selectedService.name,
-        date: date.toISOString().split('T')[0],
-        time: selectedTime,
-        payment: paymentMethod
-      });
-
       const result = await insertDropdownSelection({
         barber_id: selectedBarber.label,
         service_id: selectedService.name,
         sched_date: date.toISOString().split('T')[0],
-        sched_time: selectedTime, // Keep 12-hour format as selected
+        sched_time: selectedTime,
         subtotal,
         appointment_fee: appointmentFee,
         total,
@@ -274,9 +221,8 @@ export default function AppointmentScreen() {
         const bookingTime = Date.now() - bookingStartTime;
         console.log(`✅ Appointment successfully inserted in ${bookingTime}ms!`);
 
-        // Insert notification into notification_loader
         const notificationResult = await insertNotificationLoader(
-          'Appointment Booked',
+          'Molave Street Barbers',
           `Your appointment has been successfully booked for ${formatDate(date)} at ${selectedTime}.`,
           result.data?.[0]?.id ? result.data[0].id.toString() : undefined
         );
@@ -309,13 +255,11 @@ export default function AppointmentScreen() {
     setIsBooking(true);
 
     try {
-      console.log('🚀 Starting cash payment appointment booking...');
-
       const result = await insertDropdownSelection({
         barber_id: selectedBarber.label,
         service_id: selectedService.name,
         sched_date: date.toISOString().split('T')[0],
-        sched_time: selectedTime, // Keep 12-hour format as selected
+        sched_time: selectedTime,
         subtotal,
         appointment_fee: appointmentFee,
         total,
@@ -327,7 +271,6 @@ export default function AppointmentScreen() {
         const bookingTime = Date.now() - bookingStartTime;
         console.log(`✅ Cash payment appointment booked in ${bookingTime}ms!`);
 
-        // Insert notification into notification_loader
         const notificationResult = await insertNotificationLoader(
           'Appointment Booked',
           `Your appointment has been successfully booked for ${formatDate(date)} at ${selectedTime}.`,
@@ -365,7 +308,11 @@ export default function AppointmentScreen() {
 
       <Text style={styles.title}>Book an Appointment</Text>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled={true}
+      >
         {/* Barber Info */}
         <View style={[styles.dayOff, styles.boxShadow]}>
           <View style={styles.dayOffImageContainer}>
@@ -390,7 +337,7 @@ export default function AppointmentScreen() {
 
         {/* Service Selection */}
         <Text style={styles.sectionTitle}>Choose a service</Text>
-        <Services onSelect={handleServiceSelect} />
+        <Services onSelect={handleServiceSelect} barberId={selectedBarber?.label?.replace(' - Barber', '')} />
 
         {/* Date Picker */}
         <Text style={[styles.sectionTitle, {bottom: 20}]}>Choose a date</Text>
@@ -418,9 +365,6 @@ export default function AppointmentScreen() {
           </Pressable>
         </View>
         <TimeSelector onTimeSelect={setSelectedTime} disabledTimes={disabledTimes} bookedUsers={bookedUsers} />
-
-
-
 
         {/* Name Display */}
         <View style={styles.infoDisplayContainer}>
@@ -493,7 +437,6 @@ export default function AppointmentScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Loading indicator */}
           {isBooking && (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>{bookingStep}</Text>
@@ -539,17 +482,17 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 50,
-    paddingHorizontal: width * 0.05, // 5% padding on left/right
+    paddingHorizontal: width * 0.05,
   },
   backBtn: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 30, // Adjust for iOS notch
+    top: Platform.OS === 'ios' ? 60 : 30,
     left: 20,
     zIndex: 1,
     padding: 5,
   },
   title: {
-    marginTop: Platform.OS === 'ios' ? 60 : 30, // Adjust for iOS notch
+    marginTop: Platform.OS === 'ios' ? 60 : 30,
     textAlign: 'center',
     fontSize: 22,
     fontFamily: 'Satoshi-Bold',
@@ -558,53 +501,50 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
   dayOff: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15, // Added padding
+    padding: 15,
     marginTop: 10,
     marginBottom: 20,
     backgroundColor: 'white',
     borderRadius: 20,
-    width: '100%', // Take full width
-    alignSelf: 'center', // Center horizontally
+    width: '100%',
+    alignSelf: 'center',
   },
   boxShadow: {
-    shadowColor: '#000000', // Changed to hex for consistency
-    shadowOffset: { width: 0, height: 5 }, // Adjusted for better look
-    shadowOpacity: 0.1, // Reduced for softer shadow
-    shadowRadius: 10, // Adjusted
-    elevation: 5, // Android shadow
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   dayOffImageContainer: {
     marginRight: 15,
   },
   dayOffImage: {
-    width: width * 0.25, // Responsive width
-    height: width * 0.25, // Responsive height (square)
-    borderRadius: (width * 0.25) / 2, // Make it circular
+    width: width * 0.25,
+    height: width * 0.25,
   },
   dayOffImagePlaceholder: {
-    width: width * 0.25, // Responsive width
-    height: width * 0.25, // Responsive height (square)
-    borderRadius: (width * 0.25) / 2, // Make it circular
-    backgroundColor: '#f0f0f0', // Light gray background
+    width: width * 0.25,
+    height: width * 0.25,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   dayOffContent: {
-    flex: 1, // Allow content to take remaining space
+    flex: 1,
   },
   dayOffText: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 16,
-    marginBottom: 5, // Reduced margin
+    marginBottom: 5,
     color: '#333',
   },
-  sectionTitle: { // Combined barberText, serviceText, dateText
+  sectionTitle: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 18,
     marginTop: 20,
     marginBottom: 10,
     color: '#333',
-    // Removed fixed 'left: 10', using padding of parent ScrollView
   },
   dateButton: {
     flexDirection: 'row',
@@ -614,7 +554,7 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
     borderWidth: 1,
     borderColor: '#b1b1b1',
     borderRadius: 8,
-    width: '100%', // Responsive width
+    width: '100%',
     height: 50,
     marginBottom: 10,
     paddingHorizontal: 16,
@@ -630,26 +570,24 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
     color: '#333',
     fontFamily: 'Satoshi-Regular',
   },
-  timeSection: { // Combined 'time'
+  timeSection: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 20,
-    // Removed paddingHorizontal, using parent ScrollView padding
   },
   timeInfoBtn: {
     marginLeft: 5,
     top: 3,
   },
-  infoDisplayContainer: { // Combined 'name' and 'contact'
+  infoDisplayContainer: {
     marginTop: 20,
-    // Removed paddingHorizontal, using parent ScrollView padding
   },
-  infoDisplayTextTitle: { // Combined nameText and contactText
+  infoDisplayTextTitle: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 18,
     color: '#333',
   },
-  infoDisplayValue: { // Combined displayText
+  infoDisplayValue: {
     fontSize: 16,
     fontFamily: 'Satoshi-Bold',
     marginTop: 10,
@@ -659,27 +597,27 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
     marginTop: 50,
     backgroundColor: 'black',
     borderRadius: 12,
-    paddingVertical: 20, // Adjusted padding
+    paddingVertical: 20,
     paddingHorizontal: 20,
-    width: '100%', // Responsive width
-    alignSelf: 'center', // Center horizontally
+    width: '100%',
+    alignSelf: 'center',
   },
-  totalRow: { // Combined subTotal and AppointmentContainer
+  totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15, // Adjusted margin
+    marginBottom: 15,
   },
-  totalRowText: { // Combined subTotalText1, AppointmentText1, subTotalText2, AppointmentText2
+  totalRowText: {
     fontSize: 18,
     color: 'white',
     fontFamily: 'Satoshi-Bold',
   },
   tooltipIcon: {
     marginLeft: 5,
-    top: 2, // Slight adjustment for alignment
+    top: 2,
   },
-  grandTotalRow: { // Combined total
+  grandTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -688,7 +626,7 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
     paddingTop: 15,
     marginTop: 10,
   },
-  grandTotalText: { // Combined totalText1 and totalText2
+  grandTotalText: {
     fontSize: 20,
     color: 'white',
     fontFamily: 'Satoshi-Bold',
@@ -697,14 +635,14 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 30, // Adjusted margin
+    marginTop: 30,
   },
   paymentMethodHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15, // Adjusted margin
-    alignSelf: 'flex-start', // Align to start of its container
-    marginLeft: width * 0.05, // Align with scrollview content
+    marginBottom: 15,
+    alignSelf: 'flex-start',
+    marginLeft: width * 0.05,
   },
   paymentMethodTitle: {
     fontFamily: 'Satoshi-Bold',
@@ -712,17 +650,17 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
   },
   paymentInfoBtn: {
     marginLeft: 5,
-    top: -2, // Adjusted
+    top: -2,
   },
-  paymentBtn: { // Common styles for all payment buttons
-    padding: 15, // Increased padding for better touch area
+  paymentBtn: {
+    padding: 15,
     borderRadius: 30,
-    marginBottom: 15, // Adjusted margin
-    width: '90%', // Responsive width
-    alignSelf: 'center', // Center horizontally
+    marginBottom: 15,
+    width: '90%',
+    alignSelf: 'center',
   },
   gcashBtn: {
-    backgroundColor: '#00a2ff', // Removed extra 'ff' for standard hex color
+    backgroundColor: '#00a2ff',
   },
   mayaBtn: {
     backgroundColor: '#0DB36B',
@@ -730,7 +668,7 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
   payInPersonBtn: {
     backgroundColor: 'black',
   },
-  paymentBtnText: { // Combined gcashText, mayaText, payInPersonText
+  paymentBtnText: {
     fontSize: 17,
     color: 'white',
     textAlign: 'center',
@@ -745,27 +683,13 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
     alignItems: 'center',
-    width: '90%', // Responsive width
+    width: '90%',
     alignSelf: 'center',
   },
   loadingText: {
     fontSize: 14,
     fontFamily: 'Satoshi-Regular',
     color: '#666',
-    textAlign: 'center',
-  },
-  selectedTimeContainer: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    alignSelf: 'center',
-    width: '90%',
-  },
-  selectedTimeText: {
-    fontSize: 16,
-    fontFamily: 'Satoshi-Bold',
-    color: '#333',
     textAlign: 'center',
   },
 });

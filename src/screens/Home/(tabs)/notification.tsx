@@ -1,10 +1,11 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList, Modal, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native'
 import React, { useState, useEffect, useRef } from 'react'
 
 //icons
 import Fontisto from '@expo/vector-icons/Fontisto';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 // supabase
 import { supabase } from '../../../lib/supabase/client';
@@ -14,10 +15,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 // notification
 import { useNotification } from '../../../contexts/notificationContext';
-import * as Notifications from 'expo-notifications';
 
 // components
-import ReceiptModal from '../../../components/Modals/receipt';
 import NotificationViewer from '../../../components/Modals/notificationViewer';
 
 interface Appointment {
@@ -33,13 +32,14 @@ interface Appointment {
   payment_method?: string;
 }
 
-interface Notification {
+interface NotifItem {
   id: string;
   user_id: string;
   receipt_id?: string;
   title: string;
   description?: string;
   created_at: string;
+  read: boolean;
 }
 
 const barberMap: { [key: string]: string } = {
@@ -88,8 +88,6 @@ const formatStatus = (status: string): string => {
   return status;
 };
 
-
-
 const getStatusButtonText = (status: string) => {
   const negativeStatuses = ['Cancelled', 'No Show'];
   const positiveStatuses = ['Approved', 'Completed'];
@@ -99,18 +97,23 @@ const getStatusButtonText = (status: string) => {
   } else if (positiveStatuses.includes(status)) {
     return status;
   } else {
-    return 'Cancel Appointment'; // Default for other statuses like 'On Going'
+    return 'Cancel Appointment';
   }
 };
 
-export default function Notification() {
+interface NotificationProps {
+  onUnreadUpdate?: (count: number) => void;
+}
+
+export default function Notification({ onUnreadUpdate }: NotificationProps) {
+  const { width, height } = useWindowDimensions();
   const { user, loading: authLoading, refreshSession } = useAuth();
   const { expoPushToken } = useNotification();
 
   const [activeTab, setActiveTab] = useState('Notification');
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotifItem[]>([]);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notificationRetry, setNotificationRetry] = useState(false);
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -123,10 +126,17 @@ export default function Notification() {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [notificationViewerVisible, setNotificationViewerVisible] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<NotifItem | null>(null);
+
+  // New states for selection mode
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedNotifications, setSelectedNotifications] = useState<Set<string>>(new Set());
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
+    // Exit selection mode when switching tabs
+    setSelectionMode(false);
+    setSelectedNotifications(new Set());
   };
 
   // Cleanup timeout on unmount or tab change
@@ -144,7 +154,6 @@ export default function Notification() {
   useEffect(() => {
     if (user) {
       const fetchAppointments = async () => {
-        // Fetch appointments directly from Supabase
         const { data, error } = await supabase
           .from('appointment_sched')
           .select('*')
@@ -159,7 +168,6 @@ export default function Notification() {
       };
       fetchAppointments();
 
-      // Fetch notifications
       const fetchNotifications = async () => {
         setNotificationLoading(true);
         setNotificationRetry(false);
@@ -172,7 +180,6 @@ export default function Notification() {
 
           if (error) {
             console.error('Error fetching notifications:', error);
-            // Set timeout for retry if no data loaded
             notificationTimeoutRef.current = setTimeout(() => {
               setNotificationRetry(true);
             }, 10000);
@@ -181,7 +188,6 @@ export default function Notification() {
           }
         } catch (error) {
           console.error('Error fetching notifications:', error);
-          // Set timeout for retry if no data loaded
           notificationTimeoutRef.current = setTimeout(() => {
             setNotificationRetry(true);
           }, 10000);
@@ -191,16 +197,158 @@ export default function Notification() {
       };
       fetchNotifications();
     } else if (!authLoading) {
-      // No user and auth not loading, start status loading and timeout
       setStatusLoading(true);
       setShowRetry(false);
-      // Set 30s timeout
       retryTimeoutRef.current = setTimeout(() => {
         setStatusLoading(false);
         setShowRetry(true);
       }, 30000);
     }
   }, [user, authLoading]);
+
+  const hasUnread = notifications.some(n => !n.read);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notification_loader')
+        .update({ read: true })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error marking notification as read:', error);
+      } else {
+        setNotifications(prev => {
+          const updated = prev.map(notif =>
+            notif.id === id ? { ...notif, read: true } : notif
+          );
+          if (onUnreadUpdate) {
+            const newUnreadCount = updated.filter(n => !n.read).length;
+            onUnreadUpdate(newUnreadCount);
+          }
+          return updated;
+        });
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const { error } = await supabase
+        .from('notification_loader')
+        .update({ read: true })
+        .eq('user_id', user?.id)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error marking all notifications as read:', error);
+      } else {
+        setNotifications(prev => {
+          const updated = prev.map(notif => ({ ...notif, read: true }));
+          if (onUnreadUpdate) {
+            onUnreadUpdate(0);
+          }
+          return updated;
+        });
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const handleNotificationPress = (notification: NotifItem) => {
+    if (selectionMode) {
+      toggleNotificationSelection(notification.id);
+    } else {
+      handleMarkAsRead(notification.id);
+      setSelectedNotification(notification);
+      setNotificationViewerVisible(true);
+    }
+  };
+
+  const handleNotificationLongPress = (id: string) => {
+    if (!selectionMode) {
+      setSelectionMode(true);
+      setSelectedNotifications(new Set([id]));
+    }
+  };
+
+  const toggleNotificationSelection = (id: string) => {
+    setSelectedNotifications(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedNotifications.size === notifications.length) {
+      setSelectedNotifications(new Set());
+    } else {
+      setSelectedNotifications(new Set(notifications.map(n => n.id)));
+    }
+  };
+
+
+
+  const handleMarkSelectedAsRead = async () => {
+    try {
+      const idsToMark = Array.from(selectedNotifications);
+      const { error } = await supabase
+        .from('notification_loader')
+        .update({ read: true })
+        .in('id', idsToMark);
+
+      if (error) {
+        console.error('Error marking notifications as read:', error);
+      } else {
+        setNotifications(prev => {
+          const updated = prev.map(notif =>
+            selectedNotifications.has(notif.id) ? { ...notif, read: true } : notif
+          );
+          if (onUnreadUpdate) {
+            const newUnreadCount = updated.filter(n => !n.read).length;
+            onUnreadUpdate(newUnreadCount);
+          }
+          return updated;
+        });
+        setSelectionMode(false);
+        setSelectedNotifications(new Set());
+      }
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notification_loader')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting notification:', error);
+      } else {
+        setNotifications(prev => {
+          const updated = prev.filter(notif => notif.id !== id);
+          if (onUnreadUpdate) {
+            const newUnreadCount = updated.filter(n => !n.read).length;
+            onUnreadUpdate(newUnreadCount);
+          }
+          return updated;
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
 
   const renderNotificationContent = () => {
     if (notificationLoading) {
@@ -221,7 +369,6 @@ export default function Notification() {
             <TouchableOpacity onPress={() => {
               setNotificationRetry(false);
               setNotificationLoading(true);
-              // Refetch notifications
               const fetchNotifications = async () => {
                 try {
                   const { data, error } = await supabase
@@ -232,7 +379,6 @@ export default function Notification() {
 
                   if (error) {
                     console.error('Error fetching notifications:', error);
-                    // Set timeout for retry if no data loaded
                     notificationTimeoutRef.current = setTimeout(() => {
                       setNotificationRetry(true);
                     }, 10000);
@@ -241,7 +387,6 @@ export default function Notification() {
                   }
                 } catch (error) {
                   console.error('Error fetching notifications:', error);
-                  // Set timeout for retry if no data loaded
                   notificationTimeoutRef.current = setTimeout(() => {
                     setNotificationRetry(true);
                   }, 10000);
@@ -271,11 +416,38 @@ export default function Notification() {
     return (
       <ScrollView style={styles.notifBox} showsVerticalScrollIndicator={false}>
         {notifications.map((notification) => (
-          <TouchableOpacity key={notification.id} style={styles.notif} onPress={() => { setSelectedNotification(notification); setNotificationViewerVisible(true); }}>
-            <Fontisto name="bell" size={54} color="black" style={{left: 10, top: 9}}/>
+          <TouchableOpacity
+            key={notification.id}
+            style={[
+              styles.notif,
+              selectedNotifications.has(notification.id) && styles.notifSelected
+            ]}
+            onPress={() => handleNotificationPress(notification)}
+            onLongPress={() => handleNotificationLongPress(notification.id)}
+          >
+            {selectionMode && (
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => toggleNotificationSelection(notification.id)}
+              >
+                <View style={[
+                  styles.squareCheckbox,
+                  selectedNotifications.has(notification.id) && styles.squareCheckboxChecked
+                ]}>
+                  {selectedNotifications.has(notification.id) && (
+                    <Ionicons name="checkmark" size={18} color="white" />
+                  )}
+                </View>
+              </TouchableOpacity>
+            )}
+            <View style={styles.notifIconContainer}>
+              <Fontisto name={notification.read ? "bell" : "bell-alt"} size={24} color="white" />
+              {!notification.read && <View style={styles.newNotifDot} />}
+            </View>
             <View style={styles.notifContent}>
               <Text style={styles.notifTitle}>{notification.title}</Text>
-              <Text style={styles.notifText}>{notification.description}</Text>
+              <Text style={styles.notifText} numberOfLines={1} ellipsizeMode="tail">{notification.description}</Text>
+              <Text style={styles.notifTime}>{new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
             </View>
           </TouchableOpacity>
         ))}
@@ -338,7 +510,6 @@ export default function Notification() {
       );
     }
 
-    // Remove duplicates based on appointment id
     const uniqueAppointments = appointments.filter((appt, index, self) =>
       index === self.findIndex(a => a.id === appt.id)
     );
@@ -347,12 +518,15 @@ export default function Notification() {
       <ScrollView style={styles.notifBox} showsVerticalScrollIndicator={false}>
         {uniqueAppointments.map((appointment) => (
           <View key={appointment.id} style={styles.notif}>
-            <MaterialCommunityIcons name="stool-outline" size={54} color="black" style={{left: 10, top: 9}}/>
+            <View style={styles.notifIconContainer}>
+              <MaterialCommunityIcons name="stool-outline" size={24} color="white" />
+            </View>
             <View style={styles.notifContent}>
               <Text style={styles.notifTitle}>{formatDate(appointment.sched_date)}</Text>
               <Text style={styles.notifText}>Appointment Status:
                <Text style={{fontFamily: 'Satoshi-Bold', color: 'black' }}> {formatStatus(appointment.status)}</Text>
               </Text>
+              <Text style={styles.notifTime}>{formatTime(appointment.sched_time)}</Text>
             </View>
             <TouchableOpacity style={styles.viewBtn} onPress={() => { setSelectedAppointment(appointment); setModalVisible(true); }}>
               <Text style={styles.viewText}>View</Text>
@@ -380,11 +554,9 @@ export default function Notification() {
     if (!error) {
       console.log('Appointment cancelled successfully');
 
-      // Send cancellation notification using context
       try {
         const { sendNotification } = useNotification();
 
-        // Send push notification
         await sendNotification(
           'Appointment Cancelled',
           `Your appointment on ${formatDate(selectedAppointment.sched_date)} has been cancelled.`,
@@ -396,7 +568,6 @@ export default function Notification() {
         console.log('Error sending cancellation notification:', notificationError);
       }
 
-      // Refetch appointments to update the list
       const { data: refetchData, error: refetchError } = await supabase
         .from('appointment_sched')
         .select('*')
@@ -408,53 +579,90 @@ export default function Notification() {
       } else {
         setAppointments(refetchData || []);
       }
-      // Update selected appointment status
       setSelectedAppointment({ ...selectedAppointment, status: 'Cancelled' });
-      // Close modal
       setModalVisible(false);
     } else {
       console.error('Error cancelling appointment:', error);
-      // Optionally show alert to user
       alert('Failed to cancel appointment. Please try again.');
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Appointments</Text>
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[
-            styles.tabBtn,
-            activeTab === 'Notification' ? styles.activeTabBtn : styles.inactiveTabBtn
-          ]}
-          onPress={() => handleTabPress('Notification')}
-        >
-          <Text style={[
-            styles.tabText,
-            activeTab === 'Notification' ? styles.activeTabText : styles.inactiveTabText
-          ]}>
-            Notification
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tabBtn,
-            activeTab === 'Status' ? styles.activeTabBtn : styles.inactiveTabBtn
-          ]}
-          onPress={() => handleTabPress('Status')}
-        >
-          <Text style={[
-            styles.tabText,
-            activeTab === 'Status' ? styles.activeTabText : styles.inactiveTabText
-          ]}>
-            Status
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.outerContainer}>
+      {/* Action buttons for Notification Tab */}
+      {activeTab === 'Notification' && (
+        <View style={styles.actionBarContainer}>
+          {selectionMode ? (
+            <>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => {
+                setSelectionMode(false);
+                setSelectedNotifications(new Set());
+              }}>
+                <Text style={styles.actionText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionBtn} onPress={handleSelectAll}>
+                <Text style={styles.actionText}>
+                  {selectedNotifications.size === notifications.length ? 'Deselect All' : 'Select All'}
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.actionBtnGroup}>
+                <TouchableOpacity
+                  style={[styles.iconActionBtn, selectedNotifications.size === 0 && styles.disabledActionBtn]}
+                  onPress={handleMarkSelectedAsRead}
+                  disabled={selectedNotifications.size === 0}
+                >
+                  <Ionicons name="checkmark-done" size={20} color={selectedNotifications.size === 0 ? "#999" : "black"} />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.actionBtn} onPress={handleMarkAllAsRead}>
+                <Text style={styles.actionText}>Mark All as Read</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => setSelectionMode(true)}>
+                <Ionicons name="checkmark-circle-outline" size={20} color="black" />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
 
-      {/* Render content based on active tab */}
-      {activeTab === 'Notification' ? renderNotificationContent() : renderStatusContent()}
+      <View style={styles.container}>
+        <Text style={styles.title}>Appointments</Text>
+        <View style={styles.tabs}>
+          <TouchableOpacity
+            style={[
+              styles.tabBtn,
+              activeTab === 'Notification' ? styles.activeTabBtn : styles.inactiveTabBtn
+            ]}
+            onPress={() => handleTabPress('Notification')}
+          >
+            <Text style={[
+              styles.tabText,
+              activeTab === 'Notification' ? styles.activeTabText : styles.inactiveTabText
+            ]}>
+              Notification
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tabBtn,
+              activeTab === 'Status' ? styles.activeTabBtn : styles.inactiveTabBtn
+            ]}
+            onPress={() => handleTabPress('Status')}
+          >
+            <Text style={[
+              styles.tabText,
+              activeTab === 'Status' ? styles.activeTabText : styles.inactiveTabText
+            ]}>
+              Status
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {activeTab === 'Notification' ? renderNotificationContent() : renderStatusContent()}
+      </View>
 
       <Modal
         visible={modalVisible}
@@ -470,11 +678,11 @@ export default function Notification() {
            <View style={styles.appointmentDetails}>
             <Text style={styles.appointmentTitle}>Appointment Details</Text>
             <Text style={styles.appointmentNameText}>Name: {selectedAppointment?.customer_name}</Text>
-            <Text style={styles.appointmentBarberText}>Barber ID: {selectedAppointment?.barber_id}</Text>
-            <Text style={styles.appointmentServiceText}>Service ID: {selectedAppointment?.service_id}</Text>
+            <Text style={styles.appointmentBarberText}>Barber: {getBarberName(selectedAppointment?.barber_id || '')}</Text>
+            <Text style={styles.appointmentServiceText}>Service: {getServiceName(selectedAppointment?.service_id || '')}</Text>
             <Text style={styles.appointmentDateText}>Date: {selectedAppointment ? formatDate(selectedAppointment.sched_date) : ''}</Text>
             <Text style={styles.appointmentTimeText}>Time: {formatTime(selectedAppointment?.sched_time)}</Text>
-            <Text style={styles.appointmentTotalText}>Total: {selectedAppointment?.total}</Text>
+            <Text style={styles.appointmentTotalText}>Total: ₱{selectedAppointment?.total}</Text>
            </View>
             <View style={styles.receiptContainer}>
               <Text style={styles.receiptTitle}>Molave Street Barbers</Text>
@@ -520,6 +728,9 @@ export default function Notification() {
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -569,69 +780,70 @@ const styles = StyleSheet.create({
   notifBox: {
     width: 380,
     height: 530,
-    top: 150,
+    top: 160,
     borderRadius: 10,
   },
   notif: {
-    width: 380,
-    height: 80,
+    width: '100%',
+    height: 90,
     backgroundColor: 'white',
-    borderRadius: 10,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: '#9e9e9eff',
-    marginBottom: 10
+    borderColor: '#efefefef'
+  },
+  notifSelected: {
+    backgroundColor: '#f0f0f0',
+    borderColor: '#000',
+    borderWidth: 2,
+  },
+  notifIconContainer: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#000',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
   },
   notifContent: {
-    left: 70,
-    bottom: 40,
+    flex: 1,
   },
   notifTitle: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 18,
-    marginBottom: 5
+    fontSize: 16,
+    marginBottom: 4,
+    color: '#000',
   },
   notifText: {
     fontFamily: 'Satoshi-Regular',
-    fontSize: 13,
-    color: '#4e4e4eff'
-  },
-  // Status styles
-  statusItem: {
-    width: 380,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#9e9e9eff',
-    marginBottom: 10,
-    padding: 15,
-  },
-  statusTitle: {
-    fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    marginBottom: 8,
-    color: 'black',
-  },
-  statusText: {
-    fontFamily: 'Satoshi-Regular',
     fontSize: 14,
-    color: '#4e4e4eff',
-    marginBottom: 8,
-    lineHeight: 20,
+    color: '#666',
+    marginBottom: 4,
   },
-  statusTime: {
+  notifTime: {
     fontFamily: 'Satoshi-Regular',
     fontSize: 12,
-    color: '#999999',
-    alignSelf: 'flex-end',
+    color: '#999',
   },
   viewBtn: {
-    bottom: 75,
-    left: 330,
+    backgroundColor: '#000',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 15,
   },
   viewText: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    color: 'black',
+    fontSize: 14,
+    color: 'white',
   },
   placeholder: {
     flex: 1,
@@ -809,5 +1021,88 @@ const styles = StyleSheet.create({
   },
   disabledBtn: {
     backgroundColor: '#858585ff',
+  },
+  newNotifDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    backgroundColor: 'red',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  deleteBtn: {
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: 90,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  checkboxContainer: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  squareCheckbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
+  },
+  squareCheckboxChecked: {
+    backgroundColor: '#000',
+    borderColor: '#000',
+  },
+  actionBarContainer: {
+    position: 'absolute',
+    top: 190,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    zIndex: 1000,
+  },
+  actionBtn: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    top: 2,
+    gap: 5,
+  },
+  actionText: {
+    fontFamily: 'Satoshi-Bold',
+    fontSize: 14,
+    color: 'black',
+    right: 15
+  },
+  actionBtnGroup: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  iconActionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledActionBtn: {
+    opacity: 0.5,
   },
 })

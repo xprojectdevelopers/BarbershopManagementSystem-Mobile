@@ -1,8 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View, Modal, Pressable, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Modal, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
 
-interface Notification {
+interface AppNotification {
   id: string;
   user_id: string;
   receipt_id?: string;
@@ -14,10 +14,11 @@ interface Notification {
 interface NotificationViewerProps {
   visible: boolean;
   onClose: () => void;
-  notification: Notification | null;
+  notification: AppNotification | null;
+  loading?: boolean;
 }
 
-const NotificationViewer: React.FC<NotificationViewerProps> = ({ visible, onClose, notification }) => {
+const NotificationViewer: React.FC<NotificationViewerProps> = ({ visible, onClose, notification, loading = false }) => {
   if (!notification) return null;
 
   return (
@@ -28,15 +29,23 @@ const NotificationViewer: React.FC<NotificationViewerProps> = ({ visible, onClos
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <View style={styles.modalContent}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <AntDesign name="close" size={17} color="black" />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>{notification.title}</Text>
-          <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionText}>{notification.description}</Text>
-          </View>
-          {notification.receipt_id && (
-            <Text style={styles.receiptText}>Receipt ID: {notification.receipt_id}</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#000" />
+          ) : (
+            <View style={styles.outline}>
+              <View style={styles.title}>
+                <Text style={styles.titleText}>Molave Street Barbers</Text>
+                <Text style={styles.description}>112 Upper Molave Street Payatas B.</Text>
+                <Text style={styles.description}>1119 Quezon City, Philippines</Text>
+                <Text style={styles.description}>0909123456</Text>
+              </View>
+              <View style={styles.notificationdesc}>
+                <Text style={styles.notifdesc}>{notification.description}</Text>
+              </View>
+              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                <Text style={styles.closeBtnText}>Read</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </Pressable>
@@ -56,21 +65,59 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: 'white',
     padding: 20,
-    borderRadius: 10,
     width: 350,
+    height: 450,
     maxHeight: 500,
     alignItems: 'center',
   },
-  closeBtn: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    borderRadius: 50,
-    width: 30,
-    height: 30,
-    backgroundColor: '#d6d6d6ff',
+  outline: {
+    height: 400,
+    width: 300,
+    borderWidth: 2,
+    borderColor: 'black',
+  },
+  title: {
     justifyContent: 'center',
     alignItems: 'center',
+    top: 20
+  },
+  titleText: {
+    fontSize: 24,
+    fontFamily: 'Oswald-Bold',
+  },
+  description: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Regular',
+    textAlign: 'center',
+    marginVertical: 2,
+    
+  },
+  notificationdesc: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    top: 50
+  },
+  notifdesc: {
+    fontSize: 18,
+    fontFamily: 'Satoshi-Bold',
+    textAlign: 'center',
+    paddingLeft: 17,
+    paddingRight: 17
+  },
+  closeBtn: {
+    top: 100,
+    left: 70,
+    borderRadius: 50,
+    width: 150,
+    height: 50,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeBtnText: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   modalTitle: {
     fontFamily: 'Satoshi-Bold',

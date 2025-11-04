@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getServicesByBarberNickname, Service } from '../../lib/supabase/serviceFunctions';
 
 // Define the type for dropdown items
 interface ServiceItem {
@@ -10,26 +11,75 @@ interface ServiceItem {
 
 interface ServicesProps {
   onSelect?: (item: ServiceItem) => void;
+  barberId?: string;
 }
 
-export default function Services({ onSelect }: ServicesProps) {
+export default function Services({ onSelect, barberId }: ServicesProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<ServiceItem | null>(null);
+  const [dropDownItems, setDropDownItems] = useState<ServiceItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const dropDownItems: ServiceItem[] = [
-     { id: 1, name: 'Haircut (Walk-in)', price: '₱150' }, // Adjusted name for consistency
-     { id: 2, name: 'Reservation (Walk-in)', price: '₱200' }, // Adjusted name for consistency
-     { id: 3, name: 'Haircut/Wash', price: '₱250' },
-     { id: 4, name: 'Haircut/Hot Towel', price: '₱250' },
-     { id: 5, name: 'Hairdye/Haircut', price: '₱350' },
-     { id: 6, name: 'Hair Color/Haircut', price: '₱400' }, // Corrected capitalization
-     { id: 7, name: 'Highlights/Haircut', price: '₱500' },
-     { id: 8, name: 'Balayage/Haircut', price: '₱500' }, // Corrected spelling
-     { id: 9, name: 'Bleaching/Haircut', price: '₱800' },
-     { id: 10, name: 'Perm/Haircut', price: '₱1000' },
-     { id: 11, name: 'Rebond/Short Hair', price: '₱1000' }, // Adjusted name for consistency
-     { id: 12, name: 'Rebond/Long Hair', price: '₱1500' } // Adjusted name for consistency
-  ];
+  useEffect(() => {
+    if (barberId) {
+      fetchServices();
+    } else {
+      // Default services if no barber selected
+      setDropDownItems([
+        { id: 1, name: 'Haircut (Walk-in)', price: '₱150' },
+        { id: 2, name: 'Reservation (Walk-in)', price: '₱200' },
+        { id: 3, name: 'Haircut/Wash', price: '₱250' },
+        { id: 4, name: 'Haircut/Hot Towel', price: '₱250' },
+        { id: 5, name: 'Hairdye/Haircut', price: '₱350' },
+        { id: 6, name: 'Hair Color/Haircut', price: '₱400' },
+        { id: 7, name: 'Highlights/Haircut', price: '₱500' },
+        { id: 8, name: 'Balayage/Haircut', price: '₱500' },
+        { id: 9, name: 'Bleaching/Haircut', price: '₱800' },
+        { id: 10, name: 'Perm/Haircut', price: '₱1000' },
+        { id: 11, name: 'Rebond/Short Hair', price: '₱1000' },
+        { id: 12, name: 'Rebond/Long Hair', price: '₱1500' }
+      ]);
+    }
+  }, [barberId]);
+
+  const fetchServices = async () => {
+    if (!barberId) return;
+
+    setLoading(true);
+    try {
+      const result = await getServicesByBarberNickname(barberId);
+      if (result.success && result.data) {
+        console.log('Fetched services:', result.data); // Debug log
+        const services: ServiceItem[] = result.data.map((service: Service, index: number) => ({
+          id: index + 1,
+          name: service.Service,
+          price: `₱${service.Price}`
+        }));
+        setDropDownItems(services);
+      } else {
+        console.error('Failed to fetch services:', result.error);
+        // Fallback to default services
+        setDropDownItems([
+          { id: 1, name: 'Haircut (Walk-in)', price: '₱150' },
+          { id: 2, name: 'Reservation (Walk-in)', price: '₱200' },
+          { id: 3, name: 'Haircut/Wash', price: '₱250' },
+          { id: 4, name: 'Haircut/Hot Towel', price: '₱250' },
+          { id: 5, name: 'Hairdye/Haircut', price: '₱350' },
+          { id: 6, name: 'Hair Color/Haircut', price: '₱400' },
+          { id: 7, name: 'Highlights/Haircut', price: '₱500' },
+          { id: 8, name: 'Balayage/Haircut', price: '₱500' },
+          { id: 9, name: 'Bleaching/Haircut', price: '₱800' },
+          { id: 10, name: 'Perm/Haircut', price: '₱1000' },
+          { id: 11, name: 'Rebond/Short Hair', price: '₱1000' },
+          { id: 12, name: 'Rebond/Long Hair', price: '₱1500' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelect = (item: ServiceItem): void => {
     setSelectedItem(item);

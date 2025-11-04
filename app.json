@@ -40,7 +40,7 @@
         }
       ]
     },
-    "platforms": ["ios", "android"],
+    "platforms": ["ios", "android", "web"],
     "web": {
       "favicon": "./assets/img/Favicon.png"
     },

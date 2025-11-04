@@ -5,7 +5,7 @@ export interface Employee {
   Full_Name: string;
   Employee_Role: string;
   expertise: string;
-  work_sched: string[];
+  dayOff: string[];
   Photo: string;
 }
 
