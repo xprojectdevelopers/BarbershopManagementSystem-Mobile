@@ -34,6 +34,7 @@ import AppointmentPayment from '../../components/Modals/appointmentPayment';
 import ToolTip1 from '../../components/Modals/Tooltips/toolTip1';
 import ToolTip2 from '../../components/Modals/Tooltips/toolTip2';
 import ToolTip3 from '../../components/Modals/Tooltips/tooTip3';
+import EmployeeSchedule from '../../components/EmployeeSchedule';
 
 interface BarberItem {
   id: string;
@@ -67,11 +68,6 @@ export default function AppointmentScreen() {
   const [total, setTotal] = React.useState<number>(50);
   const [modalVisible, setModalVisible] = React.useState(false);
   const [alertVisible, setAlertVisible] = React.useState(true);
-  const [employeeName, setEmployeeName] = React.useState('');
-  const [employeeExpertise, setEmployeeExpertise] = React.useState('');
-  const [employeeRestDay, setEmployeeRestDay] = React.useState('');
-  const [employeePhoto, setEmployeePhoto] = React.useState('');
-  const [restDays, setRestDays] = React.useState<string[]>([]);
   const [tooltipVisible, setTooltipVisible] = React.useState(false);
   const [tooltip2Visible, setTooltip2Visible] = React.useState(false);
   const [tooltip3Visible, setTooltip3Visible] = React.useState(false);
@@ -92,25 +88,6 @@ export default function AppointmentScreen() {
       fetchProfile();
     }
   }, [user]);
-
-  React.useEffect(() => {
-    if (selectedBarber) {
-      const fetchEmployee = async () => {
-        const employeeResult = await getEmployeeById(selectedBarber.value);
-        if (employeeResult.success && employeeResult.data) {
-          setEmployeeName(employeeResult.data.Full_Name || 'undefined');
-          setEmployeeExpertise(employeeResult.data.Employee_Role || 'undefined');
-          setEmployeePhoto(employeeResult.data.Photo);
-          const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-          const workDays = employeeResult.data.dayOff || [];
-          const restDays = allDays.filter(day => !workDays.includes(day));
-          setEmployeeRestDay(restDays.length > 0 ? restDays.join(', ') : 'undefined');
-          setRestDays(restDays);
-        }
-      };
-      fetchEmployee();
-    }
-  }, [selectedBarber]);
 
   React.useEffect(() => {
     if (selectedBarber && date) {
@@ -313,23 +290,8 @@ export default function AppointmentScreen() {
         contentContainerStyle={styles.scrollContent}
         nestedScrollEnabled={true}
       >
-        {/* Barber Info */}
-        <View style={[styles.dayOff, styles.boxShadow]}>
-          <View style={styles.dayOffImageContainer}>
-            {employeePhoto ? (
-              <Image source={{ uri: employeePhoto }} style={styles.dayOffImage} />
-            ) : (
-              <View style={styles.dayOffImagePlaceholder}>
-                <Ionicons name="person" size={width * 0.15} color="#666" />
-              </View>
-            )}
-          </View>
-          <View style={styles.dayOffContent}>
-            <Text style={styles.dayOffText}>Name: {employeeName}</Text>
-            <Text style={styles.dayOffText}>Expertise: {employeeExpertise}</Text>
-            <Text style={styles.dayOffText}>Day Off: {employeeRestDay}</Text>
-          </View>
-        </View>
+        {/* Employee Schedule Component */}
+        <EmployeeSchedule barberId={selectedBarber?.value} />
 
         {/* Barber Selection */}
         <Text style={styles.sectionTitle}>Choose a barber</Text>
@@ -486,7 +448,7 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
   },
   backBtn: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 30,
+    top: Platform.OS === 'ios' ? 60 : 40,
     left: 20,
     zIndex: 1,
     padding: 5,
@@ -497,47 +459,7 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
     fontSize: 22,
     fontFamily: 'Satoshi-Bold',
     marginBottom: 30,
-  },
-  dayOff: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    marginTop: 10,
-    marginBottom: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  boxShadow: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  dayOffImageContainer: {
-    marginRight: 15,
-  },
-  dayOffImage: {
-    width: width * 0.25,
-    height: width * 0.25,
-  },
-  dayOffImagePlaceholder: {
-    width: width * 0.25,
-    height: width * 0.25,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dayOffContent: {
-    flex: 1,
-  },
-  dayOffText: {
-    fontFamily: 'Satoshi-Bold',
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#333',
+    top: 20
   },
   sectionTitle: {
     fontFamily: 'Satoshi-Bold',

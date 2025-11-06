@@ -221,6 +221,7 @@ export async function insertNotificationLoader(title: string, description?: stri
           title,
           description,
           receipt_id,
+          read: false,
         },
       ]);
 

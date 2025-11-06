@@ -47,8 +47,8 @@ const styles = StyleSheet.create({
     width: '60%',
     maxWidth: 300,
     height: 300,
-    top: 95,
-    left: 65,
+    top: 125,
+    left: 75,
   },
   tooltipContent: {
     backgroundColor: 'white',

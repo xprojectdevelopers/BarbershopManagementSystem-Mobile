@@ -1,5 +1,12 @@
 import React from 'react';
-import { Modal, View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { 
+  Modal, 
+  View, 
+  StyleSheet, 
+  Text, 
+  TouchableOpacity,
+  Dimensions 
+} from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 interface PhotoOptionsModalProps {
@@ -8,37 +15,91 @@ interface PhotoOptionsModalProps {
   onCamera: () => void;
   onGallery: () => void;
   onRemove: () => void;
+  showRemoveOption?: boolean;
 }
 
-export default function PhotoOptionsModal({ visible, onClose, onCamera, onGallery, onRemove }: PhotoOptionsModalProps) {
+const { width } = Dimensions.get('window');
+
+export default function PhotoOptionsModal({ 
+  visible, 
+  onClose, 
+  onCamera, 
+  onGallery, 
+  onRemove,
+  showRemoveOption = true 
+}: PhotoOptionsModalProps) {
+  const handleCameraPress = () => {
+    onClose();
+    onCamera();
+  };
+
+  const handleGalleryPress = () => {
+    onClose();
+    onGallery();
+  };
+
+  const handleRemovePress = () => {
+    onClose();
+    onRemove();
+  };
+
   return (
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <View style={styles.modalOverlay}>
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
         <View style={styles.modalContent}>
-          <View style={styles.optionsRow}>
-            <TouchableOpacity style={styles.optionButton} onPress={onCamera}>
-              <Ionicons name="camera" size={24} color="#000" />
-              <Text style={styles.optionText}>Camera</Text>
+          <View style={styles.optionsContainer}>
+            <TouchableOpacity 
+              style={styles.optionButton} 
+              onPress={handleCameraPress}
+            >
+              <View style={styles.optionIconContainer}>
+                <Ionicons name="camera" size={28} color="#007AFF" />
+              </View>
+              <Text style={styles.optionText}>Take Photo</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.optionButton} onPress={onGallery}>
-              <MaterialIcons name="photo-library" size={24} color="#000" />
-              <Text style={styles.optionText}>Gallery</Text>
+
+            <TouchableOpacity 
+              style={styles.optionButton} 
+              onPress={handleGalleryPress}
+            >
+              <View style={styles.optionIconContainer}>
+                <MaterialIcons name="photo-library" size={28} color="#007AFF" />
+              </View>
+              <Text style={styles.optionText}>Choose from Gallery</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.optionButton} onPress={onRemove}>
-              <Ionicons name="trash" size={24} color="#000" />
-              <Text style={styles.optionText}>Remove</Text>
-            </TouchableOpacity>
+
+            {showRemoveOption && (
+              <TouchableOpacity 
+                style={styles.optionButton} 
+                onPress={handleRemovePress}
+              >
+                <View style={styles.optionIconContainer}>
+                  <Ionicons name="trash-outline" size={28} color="#FF3B30" />
+                </View>
+                <Text style={[styles.optionText, styles.removeText]}>Remove Photo</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+
+          <TouchableOpacity 
+            style={styles.cancelButton} 
+            onPress={onClose}
+            activeOpacity={0.7}
+          >
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -46,47 +107,61 @@ export default function PhotoOptionsModal({ visible, onClose, onCamera, onGaller
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: 'white',
-    width: '80%',
-    borderRadius: 10,
-    padding: 20,
-    height: 150,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+  optionsContainer: {
+    marginBottom: 10,
   },
   optionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    marginHorizontal: 5,
-    backgroundColor: '#f9f9f9',
+    paddingVertical: 16,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#f8f9fa',
+  },
+  optionIconContainer: {
+    width: 40,
+    alignItems: 'center',
+    marginRight: 15,
   },
   optionText: {
-    fontSize: 14,
-    textAlign: 'center',
-    fontFamily: 'Satoshi-Regular',
-    marginTop: 5,
+    fontSize: 17,
+    fontFamily: 'Satoshi-Medium',
+    color: '#000',
+    flex: 1,
+  },
+  removeText: {
+    color: '#FF3B30',
   },
   cancelButton: {
-    paddingVertical: 15,
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
     marginTop: 10,
   },
   cancelText: {
-    fontSize: 18,
-    textAlign: 'center',
+    fontSize: 17,
     fontFamily: 'Satoshi-Bold',
     color: '#007AFF',
-    bottom: 15,
   },
 });

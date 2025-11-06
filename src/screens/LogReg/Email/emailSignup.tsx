@@ -19,7 +19,6 @@ export default function EmailSignup() {
   const [currentScreen, setCurrentScreen] = React.useState<Screen>('EmailScreen');
   const [email, setEmail] = useState('');
   const [display_name, setDisplayName] = useState('');
-
   const [password, setPassword] = useState('');
   const [contact_number, setContactNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +26,7 @@ export default function EmailSignup() {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [displayNameError, setDisplayNameError] = useState('');
 
   const goBack = () => {
     if (currentScreen === 'EmailScreen') navigation.navigate('SignUpOptions')
@@ -34,8 +34,6 @@ export default function EmailSignup() {
     else if (currentScreen === 'ContactNumber') setCurrentScreen('UserPassword')
     else navigation.navigate('SignUpOptions')
   }
-
-
 
   const handleNext = async () => {
     if (currentScreen === 'EmailScreen') {
@@ -48,20 +46,26 @@ export default function EmailSignup() {
       setCurrentScreen('UserPassword');
 
     } else if (currentScreen === 'UserPassword') {
+      // Reset errors
+      setDisplayNameError('');
+      setPasswordError('');
+      
+      // Validate display name
       if (!display_name.trim()) {
-        Alert.alert('Error', 'Please enter your display name');
+        setDisplayNameError('Please enter your display name');
         return;
       }
       if (display_name.length < 2) {
-        Alert.alert('Error', 'Display name must be at least 2 characters');
+        setDisplayNameError('Display name must be at least 2 characters');
         return;
       }
 
+      // Validate password
       if (!password || password.length < 8) {
         setPasswordError('Password must be at least 8 characters');
         return;
       }
-      setPasswordError('');
+      
       setCurrentScreen('ContactNumber');
     }
   };
@@ -208,7 +212,8 @@ export default function EmailSignup() {
         handleNext={handleNext}
         goBack={goBack}
         loading={loading}
-        error={passwordError}
+        displayNameError={displayNameError}
+        passwordError={passwordError}
       />
     ),
     ContactNumber: (

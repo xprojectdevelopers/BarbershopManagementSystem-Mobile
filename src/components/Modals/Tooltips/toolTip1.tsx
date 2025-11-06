@@ -46,8 +46,8 @@ const styles = StyleSheet.create({
   tooltipContainer: {
     width: '45%',
     maxWidth: 300,
-    left: 70,
-    bottom: 60,
+    left: 85,
+    bottom: 35,
   },
   tooltipContent: {
     borderWidth: 2,

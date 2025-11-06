@@ -21,9 +21,7 @@ import { getUserBadge } from '../../lib/supabase/badgeFunctions';
 import { supabase } from '../../lib/supabase/client';
 import MonthlyAnnouncement from '../../components/Carousel/monthlyAnnouncement';
 
-// Components
 import BottomTab from '../../components/bottomTab';
-
 // Tabs
 import Profile from './(tabs)/profile';
 import Notification from './(tabs)/notification';

@@ -6,6 +6,7 @@ interface BarberItem {
   id: string;
   label: string;
   value: string;
+  disabled?: boolean;
 }
 
 interface BarberNameProps {
@@ -18,19 +19,30 @@ export default function BarberName({ onSelect }: BarberNameProps) {
   const [dropDownItems, setDropDownItems] = useState<BarberItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const getCurrentDayName = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[new Date().getDay()];
+  };
+
   useEffect(() => {
     const fetchBarbers = async () => {
       setLoading(true);
       const result = await getAllEmployees();
 
       if (result.success && result.data) {
+        const today = getCurrentDayName();
         const barbers = result.data
           .filter((employee: any) => employee.Employee_Role?.toLowerCase() === 'barber')
-          .map((employee: any) => ({
-            id: employee.id,
-            label: `${employee.Employee_Nickname} - Barber`,
-            value: employee.id
-          }));
+          .map((employee: any) => {
+            const workDays = employee.Work_Sched || [];
+            const isOffToday = !workDays.includes(today);
+            return {
+              id: employee.id,
+              label: `${employee.Employee_Nickname} - Barber`,
+              value: employee.id,
+              disabled: isOffToday
+            };
+          });
         setDropDownItems(barbers);
       } else {
         console.error("Failed to fetch employees:", result.error);
@@ -41,6 +53,7 @@ export default function BarberName({ onSelect }: BarberNameProps) {
   }, []);
 
   const handleSelect = (item: BarberItem): void => {
+    if (item.disabled) return; // Prevent selecting disabled items
     setSelectedItem(item)
     setIsOpen(false)
     if (onSelect) {
@@ -85,19 +98,21 @@ export default function BarberName({ onSelect }: BarberNameProps) {
                   key={item.id}
                   style={[
                     styles.dropdownItem,
-                    selectedItem?.id === item.id && styles.selected
+                    selectedItem?.id === item.id && styles.selected,
+                    item.disabled && styles.disabledItem
                   ]}
                   onPress={() => handleSelect(item)}
-                  activeOpacity={0.7}
+                  activeOpacity={item.disabled ? 1 : 0.7}
                 >
                   <Text
                     style={[
                       styles.itemText,
                       selectedItem?.id === item.id && styles.selectedItemText,
+                      item.disabled && styles.disabledText,
                     ]}
                     numberOfLines={1}
                   >
-                    {item.label}
+                    {item.label} {item.disabled ? '(Off Today)' : ''}
                   </Text>
                   {selectedItem?.id === item.id && (
                     <Text style={styles.checkMark}>✓</Text>
@@ -203,4 +218,13 @@ const styles = StyleSheet.create({
     color: '#000000ff',
     fontWeight: 'bold',
   },
+  disabledItem: {
+    backgroundColor: '#f5f5f5',
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: '#999',
+    fontStyle: 'italic',
+  },
+
 });

@@ -5,8 +5,8 @@ import {
   TouchableOpacity, 
   TextInput,
   ActivityIndicator,
-  Dimensions, // Import Dimensions
-  Platform // Import Platform
+  Dimensions,
+  Platform
 } from 'react-native'
 import React from 'react'
 
@@ -17,10 +17,9 @@ import Entypo from '@expo/vector-icons/Entypo';
 // Get screen dimensions
 const { width, height } = Dimensions.get('window');
 
-// Define your responsive functions (copied from your example)
+// Define your responsive functions
 const responsiveWidth = (percent: number) => (width * percent) / 100;
 const responsiveHeight = (percent: number) => (height * percent) / 100;
-// Base on iPhone 6/7/8 width (375)
 const responsiveFontSize = (size: number) => size * Math.min(width, height) / 375; 
 
 interface EmailPasswordScreenProps {
@@ -33,8 +32,8 @@ interface EmailPasswordScreenProps {
   handleNext: () => void
   goBack: () => void
   loading: boolean
-  error?: string
-  passwordError?: string
+  displayNameError?: string // This is for display name errors
+  passwordError?: string // This is for password errors
 }
 
 export default function UserPassword({
@@ -47,10 +46,17 @@ export default function UserPassword({
   handleNext,
   goBack,
   loading,
-  error,
-  passwordError
+  displayNameError, // display name error
+  passwordError // password error
 }: EmailPasswordScreenProps) {
   
+  // Check if form is valid for button enable/disable
+  const isFormValid = displayName.trim() &&
+                     password.trim() &&
+                     password.length >= 8 &&
+                     !displayNameError &&
+                     !passwordError;
+
   return (
     <View style={styles.rootContainer}>
       <TouchableOpacity onPress={goBack} style={styles.backBtn}>
@@ -59,32 +65,32 @@ export default function UserPassword({
       <Text style={styles.Title}>Create an Account</Text>
       <View style={styles.container}>
         <View style={styles.RegisterForm}>
-          <Text style={styles.labelText}>Display Name</Text> {/* Changed to labelText for consistency */}
+          <Text style={styles.labelText}>Display Name</Text>
           <TextInput
             placeholder='Enter your display name'
             placeholderTextColor={'#505050ff'}
             autoCapitalize='words'
             autoCorrect={false}
-            style={[styles.inputField, {borderColor: error ? "#ef4444" : "#e5e7eb"}]}
+            style={[styles.inputField, {borderColor: displayNameError ? "#ef4444" : "#e5e7eb"}]}
             value={displayName}
             onChangeText={setDisplayName}
             editable={!loading}
           />
-          {error && (
+          {displayNameError && (
             <Text style={styles.errorText}>
-              {error}
+              {displayNameError}
             </Text>
           )}
           <Text style={styles.displayNameInfoText}>This is the name that will appear on your profile.</Text>
           
-          <Text style={styles.labelText}>Password</Text> {/* Changed to labelText */}
+          <Text style={styles.labelText}>Password</Text>
           <View style={styles.passwordContainer}>
             <TextInput
               placeholder='Enter your password'
               placeholderTextColor={'#505050ff'}
               autoCapitalize='none'
               autoCorrect={false}
-              style={[styles.inputField, styles.passwordInputField, {borderColor: passwordError ? "#ef4444" : "#e5e7eb"}]} // Re-used inputField, added specific override
+              style={[styles.inputField, styles.passwordInputField, {borderColor: passwordError ? "#ef4444" : "#e5e7eb"}]}
               secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
@@ -100,17 +106,23 @@ export default function UserPassword({
             </Text>
           )}
           <Text style={styles.passwordInfoText}>Use at least 8 characters with letters, numbers and special character.</Text>
-           <TouchableOpacity onPress={handleNext} disabled={loading || !displayName || !password || !!passwordError} style={[styles.continueBtn, {opacity: (!displayName || !password || loading || !!passwordError) ? 0.5 : 1,}]}>
+           
+          <TouchableOpacity 
+            onPress={handleNext} 
+            disabled={loading || !isFormValid} 
+            style={[
+              styles.continueBtn, 
+              {opacity: (loading || !isFormValid) ? 0.5 : 1}
+            ]}
+          >
             {loading ? (
-             <ActivityIndicator color="white" />
-           ) : (
-             <Text
-               style={styles.continueText}
-             >
-               Next
-             </Text>
-           )}
-           </TouchableOpacity> 
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.continueText}>
+                Next
+              </Text>
+            )}
+          </TouchableOpacity> 
         </View>
       </View>
     </View>
@@ -138,46 +150,46 @@ const styles = StyleSheet.create({
     top: responsiveHeight(15),
     width: '100%',
     textAlign: 'center',
-    fontSize: responsiveFontSize(26), // Original size: 26
+    fontSize: responsiveFontSize(26),
     fontFamily: 'Satoshi-Bold'
   },
   RegisterForm: {
-    marginTop: -responsiveHeight(15), // Adjusted to push up from center
+    marginTop: -responsiveHeight(15),
     width: responsiveWidth(90),
-    alignItems: 'flex-start', // Align text inputs and labels to the left
+    alignItems: 'flex-start',
   },
-  labelText: { // Combined emailText and passwordText
+  labelText: {
     fontFamily: 'Satoshi-Bold',
     fontSize: responsiveFontSize(16),
-    marginBottom: responsiveHeight(1), // Consistent spacing
+    marginBottom: responsiveHeight(1),
   },
-  inputField: { // Combined emailInput and passwordInput base styles
-    padding: responsiveFontSize(15 * 0.7), // Scaled padding
+  inputField: {
+    padding: responsiveFontSize(15 * 0.7),
     borderRadius: 10,
     width: '100%',
     height: responsiveHeight(6),
     backgroundColor: '#cacacaff',
     fontSize: responsiveFontSize(14),
-    borderWidth: 1, // Add borderWidth for consistency
-    borderColor: '#e5e7eb', // Default border color
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   displayNameInfoText: {
     fontFamily: 'Satoshi-Regular',
     fontSize: responsiveFontSize(14),
-    marginTop: responsiveHeight(1), // Consistent spacing
-    marginBottom: responsiveHeight(3), // Increased margin for spacing between inputs
+    marginTop: responsiveHeight(1),
+    marginBottom: responsiveHeight(3),
   },
   passwordInputField: {
-    marginBottom: responsiveHeight(1), // Small margin before info text
+    marginBottom: responsiveHeight(1),
   },
   passwordInfoText: {
     fontFamily: 'Satoshi-Regular',
     fontSize: responsiveFontSize(14),
-    marginTop: responsiveHeight(1), // Consistent spacing
-    marginBottom: responsiveHeight(4), // Space before continue button
+    marginTop: responsiveHeight(1),
+    marginBottom: responsiveHeight(4),
   },
   errorText: {
-    color: "red", 
+    color: "#ef4444",
     fontFamily: 'Satoshi-Regular', 
     fontSize: responsiveFontSize(14), 
     marginTop: responsiveHeight(1),
@@ -189,18 +201,17 @@ const styles = StyleSheet.create({
   eyeBtn: {
     position: 'absolute',
     right: responsiveWidth(3),
-    top: '50%',
+    top: '40%',
     transform: [{ translateY: -responsiveFontSize(12) }],
   },
   continueBtn: {
     backgroundColor: '#000000ff',
-    padding: responsiveFontSize(15 * 0.7), // Scale padding
+    padding: responsiveFontSize(15 * 0.7),
     borderRadius: 30,
     width: '100%',
     height: responsiveHeight(6),
     alignItems: 'center',
     justifyContent: 'center',
-    // Removed 'top: 70' as marginTop handles spacing
   },
   continueText: {
     color: 'white',

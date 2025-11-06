@@ -38,7 +38,7 @@ const About = () => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Entypo name="chevron-left" size={24} color="white" />
+          <Entypo name="chevron-left" size={24} color="black" />
         </TouchableOpacity>
       </View>
 

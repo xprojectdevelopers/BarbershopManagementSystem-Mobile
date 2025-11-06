@@ -260,17 +260,17 @@ export default function ProfileSettingsScreen({ refreshProfileImage }: { refresh
   };
 
   const getIconColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#000', '#ff4444'];
+    const colors = ['#000', '#000', '#000', '#fff'];
     return colors[index] || '#000';
   };
 
   const getIconBackground = (index: number) => {
-    const backgrounds = ['#f0f0f0', '#f0f0f0', '#f0f0f0', '#f0f0f0'];
+    const backgrounds = ['#f0f0f0', '#f0f0f0', '#f0f0f0', '#ff4444'];
     return backgrounds[index] || '#f0f0f0';
   };
 
   const getTextColor = (index: number) => {
-    const colors = ['#000', '#000', '#000', '#000', '#ff4444'];
+    const colors = ['#000', '#000', '#000', '#ff4444'];
     return colors[index] || '#000';
   };
 

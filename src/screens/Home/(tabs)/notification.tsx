@@ -236,15 +236,47 @@ export default function Notification({ onUnreadUpdate }: NotificationProps) {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const { error } = await supabase
+      console.log('Starting mark all as read operation for user:', user?.id);
+
+      const { data: beforeUpdate, error: fetchError } = await supabase
+        .from('notification_loader')
+        .select('id, read')
+        .eq('user_id', user?.id)
+        .eq('read', false);
+
+      if (fetchError) {
+        console.error('Error fetching unread notifications before update:', fetchError);
+      } else {
+        console.log('Unread notifications before update:', beforeUpdate);
+      }
+
+      const { data, error } = await supabase
         .from('notification_loader')
         .update({ read: true })
         .eq('user_id', user?.id)
-        .eq('read', false);
+        .eq('read', false)
+        .select('id, read');
 
       if (error) {
         console.error('Error marking all notifications as read:', error);
       } else {
+        console.log('Successfully updated notifications:', data);
+        console.log('Number of notifications marked as read:', data?.length || 0);
+
+        // Verify the update by fetching again
+        const { data: afterUpdate, error: verifyError } = await supabase
+          .from('notification_loader')
+          .select('id, read')
+          .eq('user_id', user?.id)
+          .eq('read', false);
+
+        if (verifyError) {
+          console.error('Error verifying update:', verifyError);
+        } else {
+          console.log('Unread notifications after update:', afterUpdate);
+          console.log('Verification: All notifications marked as read?', afterUpdate?.length === 0);
+        }
+
         setNotifications(prev => {
           const updated = prev.map(notif => ({ ...notif, read: true }));
           if (onUnreadUpdate) {
