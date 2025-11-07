@@ -1,9 +1,5 @@
-# TODO: Change Back Button Icon Color to Black
+# TODO: Add Delete Functionality for Selected Notifications
 
-## Tasks
-- [ ] Update back button icon color in `src/screens/profiles/about.tsx` from "white" to "black"
-- [ ] Update back button icon color in `src/screens/Home/hairContent.tsx` from "white" to "black"
-
-## Notes
-- The icon is `<Entypo name="chevron-left" size={24} color="white" />` in both files.
-- Change to `<Entypo name="chevron-left" size={24} color="black" />`.
+- [ ] Add handleDeleteSelectedNotifications function to delete multiple selected notifications
+- [ ] Add delete icon button in actionBtnGroup for selection mode
+- [ ] Test the delete functionality and ensure UI updates correctly

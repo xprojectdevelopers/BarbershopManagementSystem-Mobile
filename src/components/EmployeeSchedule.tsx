@@ -8,7 +8,7 @@ import {
   FlatList,
   Animated,
 } from 'react-native';
-import { getAllEmployees, getEmployeeById } from '../lib/supabase/employeeFunctions';
+import { getAllEmployees, getEmployeeById, getEmployeeByNickname } from '../lib/supabase/employeeFunctions';
 import { supabase } from '../lib/supabase/client';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -176,7 +176,11 @@ export default function EmployeeSchedule({ barberId }: EmployeeScheduleProps) {
   const fetchSelectedEmployee = useCallback(async (id: string) => {
     try {
       setLoading(true);
-      const result = await getEmployeeById(id);
+      // Try to fetch by nickname first, then by ID if that fails
+      let result = await getEmployeeByNickname(id);
+      if (!result.success || !result.data) {
+        result = await getEmployeeById(id);
+      }
       if (result.success && result.data) {
         setSelectedEmployee(result.data);
       } else {

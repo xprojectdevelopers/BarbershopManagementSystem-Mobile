@@ -10,6 +10,8 @@ import {
   Pressable,
   Alert,
   useWindowDimensions,
+  Modal,
+  TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
@@ -18,12 +20,13 @@ import { RootStackParamList } from '../../types/navigations';
 import { insertDropdownSelection, insertNotificationLoader } from '../../lib/supabase/insertFunctions';
 import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../contexts/AuthContext';
-import { getProfileById } from '../../lib/supabase/profileFunctions';
+import { getProfileById, updateProfile } from '../../lib/supabase/profileFunctions';
 import { getEmployeeById } from '../../lib/supabase/employeeFunctions';
 
 // Icons
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Feather from '@expo/vector-icons/Feather';
 
 // Components
 import BarberName from '../../components/Dropdowns/barberName';
@@ -76,6 +79,12 @@ export default function AppointmentScreen() {
   const [disabledTimes, setDisabledTimes] = React.useState<string[]>([]);
   const [bookedUsers, setBookedUsers] = React.useState<{ time: string; user: string }[]>([]);
 
+  // Edit modal states
+  const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [editingName, setEditingName] = React.useState('');
+  const [editingNumber, setEditingNumber] = React.useState('');
+  const [isUpdating, setIsUpdating] = React.useState(false);
+
   React.useEffect(() => {
     if (user) {
       const fetchProfile = async () => {
@@ -86,6 +95,32 @@ export default function AppointmentScreen() {
         }
       };
       fetchProfile();
+
+      // Check for existing appointments
+      const checkExistingAppointment = async () => {
+        const { data, error } = await supabase
+          .from('appointment_sched')
+          .select('*')
+          .eq('customer_id', user.id)
+          .neq('status', 'Cancelled')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error('Error fetching existing appointment:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const appointment = data[0];
+          if (appointment.status === 'On Going') {
+            setModalVisible(true);
+          } else if (appointment.status === 'Completed') {
+            setAlertVisible(true);
+          }
+        }
+      };
+      checkExistingAppointment();
     }
   }, [user]);
 
@@ -94,7 +129,7 @@ export default function AppointmentScreen() {
       const fetchBookedTimes = async () => {
         try {
           const queryDate = date.toISOString().split('T')[0];
-          const queryBarberId = selectedBarber.label;
+          const queryBarberId = selectedBarber.label.replace(' - Barber', '');
 
           const { data, error } = await supabase
             .from('appointment_sched')
@@ -183,7 +218,7 @@ export default function AppointmentScreen() {
 
     try {
       const result = await insertDropdownSelection({
-        barber_id: selectedBarber.label,
+        barber_id: selectedBarber.label.replace(' - Barber', ''),
         service_id: selectedService.name,
         sched_date: date.toISOString().split('T')[0],
         sched_time: selectedTime,
@@ -233,7 +268,7 @@ export default function AppointmentScreen() {
 
     try {
       const result = await insertDropdownSelection({
-        barber_id: selectedBarber.label,
+        barber_id: selectedBarber.label.replace(' - Barber', ''),
         service_id: selectedService.name,
         sched_date: date.toISOString().split('T')[0],
         sched_time: selectedTime,
@@ -272,7 +307,105 @@ export default function AppointmentScreen() {
     }
   };
 
+  const handleEditPress = () => {
+    setEditingName(customerName);
+    setEditingNumber(contactNumber);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+
+    setIsUpdating(true);
+    try {
+      const result = await updateProfile(user.id, {
+        display_name: editingName,
+        contact_number: editingNumber,
+      });
+
+      if (result.success) {
+        setCustomerName(editingName);
+        setContactNumber(editingNumber);
+        setEditModalVisible(false);
+        Alert.alert('Success', 'Profile updated successfully');
+      } else {
+        Alert.alert('Error', 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const styles = createStyles(width, height);
+
+  const editModalStyles = StyleSheet.create({
+    modalOverlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    editModalContent: {
+      backgroundColor: 'white',
+      padding: 20,
+      borderRadius: 10,
+      width: '90%',
+      maxWidth: 400,
+    },
+    editModalTitle: {
+      fontSize: 20,
+      fontFamily: 'Satoshi-Bold',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    editLabel: {
+      fontSize: 16,
+      fontFamily: 'Satoshi-Bold',
+      marginBottom: 5,
+      color: '#333',
+    },
+    editInput: {
+      borderWidth: 1,
+      borderColor: '#ddd',
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      marginBottom: 15,
+      fontFamily: 'Satoshi-Regular',
+    },
+    editModalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 20,
+    },
+    editButton: {
+      flex: 1,
+      padding: 15,
+      borderRadius: 8,
+      marginHorizontal: 5,
+    },
+    cancelButton: {
+      backgroundColor: '#f0f0f0',
+    },
+    saveButton: {
+      backgroundColor: 'black',
+    },
+    cancelButtonText: {
+      fontSize: 16,
+      color: '#333',
+      textAlign: 'center',
+      fontFamily: 'Satoshi-Bold',
+    },
+    saveButtonText: {
+      fontSize: 16,
+      color: 'white',
+      textAlign: 'center',
+      fontFamily: 'Satoshi-Bold',
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -330,13 +463,23 @@ export default function AppointmentScreen() {
 
         {/* Name Display */}
         <View style={styles.infoDisplayContainer}>
-          <Text style={styles.infoDisplayTextTitle}>Your Name</Text>
+          <View style={styles.infoHeader}>
+            <Text style={styles.infoDisplayTextTitle}>Your Name</Text>
+            <TouchableOpacity onPress={handleEditPress}>
+              <Feather name="edit" size={20} color="black" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.infoDisplayValue}>{customerName}</Text>
         </View>
 
         {/* Contact Number Display */}
         <View style={styles.infoDisplayContainer}>
-          <Text style={styles.infoDisplayTextTitle}>Your Contact Number</Text>
+          <View style={styles.infoHeader}>
+            <Text style={styles.infoDisplayTextTitle}>Your Contact Number</Text>
+            <TouchableOpacity onPress={handleEditPress}>
+              <Feather name="edit" size={20} color="black" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.infoDisplayValue}>{contactNumber}</Text>
         </View>
 
@@ -433,6 +576,55 @@ export default function AppointmentScreen() {
         visible={tooltip3Visible}
         onClose={() => setTooltip3Visible(false)}
       />
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={editModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={editModalStyles.modalOverlay}>
+          <View style={editModalStyles.editModalContent}>
+            <Text style={editModalStyles.editModalTitle}>Edit Profile</Text>
+
+            <Text style={editModalStyles.editLabel}>Name</Text>
+            <TextInput
+              style={editModalStyles.editInput}
+              value={editingName}
+              onChangeText={setEditingName}
+              placeholder="Enter your name"
+            />
+
+            <Text style={editModalStyles.editLabel}>Contact Number</Text>
+            <TextInput
+              style={editModalStyles.editInput}
+              value={editingNumber}
+              onChangeText={setEditingNumber}
+              placeholder="Enter your contact number"
+              keyboardType="phone-pad"
+            />
+
+            <View style={editModalStyles.editModalButtons}>
+              <TouchableOpacity
+                style={[editModalStyles.editButton, editModalStyles.cancelButton]}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={editModalStyles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[editModalStyles.editButton, editModalStyles.saveButton, isUpdating && styles.disabledBtn]}
+                onPress={handleUpdateProfile}
+                disabled={isUpdating}
+              >
+                <Text style={editModalStyles.saveButtonText}>
+                  {isUpdating ? 'Updating...' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -503,6 +695,11 @@ const createStyles = (width: number, height: number) => StyleSheet.create({
   },
   infoDisplayContainer: {
     marginTop: 20,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   infoDisplayTextTitle: {
     fontFamily: 'Satoshi-Bold',

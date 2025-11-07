@@ -32,6 +32,13 @@ interface Appointment {
   payment_method?: string;
 }
 
+interface Barber {
+  id: string;
+  Employee_FullName: string;
+  Employee_Nickname: string;
+  Employee_Role: string;
+}
+
 interface NotifItem {
   id: string;
   user_id: string;
@@ -41,14 +48,6 @@ interface NotifItem {
   created_at: string;
   read: boolean;
 }
-
-const barberMap: { [key: string]: string } = {
-  'john_doe': 'John Doe',
-  'jane_doe': 'Jane Doe',
-  'janet_doe': 'Janet Doe',
-  'jack_doe': 'Jack Doe',
-  'jim_doe': 'Jim Doe'
-};
 
 const serviceMap: { [key: string]: string } = {
   '1': 'Haircut(Walk in)',
@@ -113,6 +112,7 @@ export default function Notification({ onUnreadUpdate }: NotificationProps) {
   const [activeTab, setActiveTab] = useState('Notification');
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
   const [notifications, setNotifications] = useState<NotifItem[]>([]);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notificationRetry, setNotificationRetry] = useState(false);
@@ -151,8 +151,62 @@ export default function Notification({ onUnreadUpdate }: NotificationProps) {
     };
   }, [activeTab]);
 
+  // Get barber name from barbers list with " - Barber" format
+  const getBarberName = (barberId: string) => {
+    if (!barberId) return 'Barber';
+    
+    // Find barber where Employee_Nickname matches the barber_id from appointments
+    const barber = barbers.find(b => b.Employee_Nickname === barberId);
+    
+    if (barber) {
+      return `${barber.Employee_FullName} - Barber`;
+    }
+    
+    // If no match found, try matching by ID as fallback
+    const barberById = barbers.find(b => b.id === barberId);
+    if (barberById) {
+      return `${barberById.Employee_FullName} - Barber`;
+    }
+    
+    // Final fallback - show the original barber_id with "Barber" suffix
+    return `${barberId} - Barber`;
+  };
+
+  // Get service name from mapping
+  const getServiceName = (id: string) => {
+    return serviceMap[id] || `Service ${id}`;
+  };
+
   useEffect(() => {
     if (user) {
+      const fetchBarbers = async () => {
+        // First, let's check what columns actually exist in the table
+        const { data: allColumns, error: columnsError } = await supabase
+          .from('Add_Employee')
+          .select('*')
+          .limit(1);
+
+        if (columnsError) {
+          console.error('Error checking table columns:', columnsError);
+        } else if (allColumns && allColumns.length > 0) {
+          console.log('Available columns in Add_Employee:', Object.keys(allColumns[0]));
+        }
+
+        // Now fetch with correct column names based on the error hint
+        const { data, error } = await supabase
+          .from('Add_Employee')
+          .select('id, Employee_FullName, Employee_Nickname, Employee_Role')
+          .eq('Employee_Role', 'Barber')
+          .eq('Employee_Status', 'Active');
+
+        if (error) {
+          console.error('Error fetching barbers:', error);
+        } else {
+          console.log('Fetched barbers:', data);
+          setBarbers(data || []);
+        }
+      };
+
       const fetchAppointments = async () => {
         const { data, error } = await supabase
           .from('appointment_sched')
@@ -163,9 +217,12 @@ export default function Notification({ onUnreadUpdate }: NotificationProps) {
         if (error) {
           console.error('Error fetching appointments:', error);
         } else {
+          console.log('Fetched appointments:', data);
           setAppointments(data || []);
         }
       };
+
+      fetchBarbers();
       fetchAppointments();
 
       const fetchNotifications = async () => {
@@ -326,8 +383,6 @@ export default function Notification({ onUnreadUpdate }: NotificationProps) {
       setSelectedNotifications(new Set(notifications.map(n => n.id)));
     }
   };
-
-
 
   const handleMarkSelectedAsRead = async () => {
     try {
@@ -569,9 +624,6 @@ export default function Notification({ onUnreadUpdate }: NotificationProps) {
     );
   };
 
-  const getBarberName = (id: string) => barberMap[id] || 'Unknown Barber';
-  const getServiceName = (id: string) => serviceMap[id] || 'Unknown Service';
-
   const handleCancelAppointment = async () => {
     if (!selectedAppointment || selectedAppointment.status === 'Cancelled') {
       return;
@@ -710,7 +762,6 @@ export default function Notification({ onUnreadUpdate }: NotificationProps) {
            <View style={styles.appointmentDetails}>
             <Text style={styles.appointmentTitle}>Appointment Details</Text>
             <Text style={styles.appointmentNameText}>Name: {selectedAppointment?.customer_name}</Text>
-            <Text style={styles.appointmentBarberText}>Barber: {getBarberName(selectedAppointment?.barber_id || '')}</Text>
             <Text style={styles.appointmentServiceText}>Service: {getServiceName(selectedAppointment?.service_id || '')}</Text>
             <Text style={styles.appointmentDateText}>Date: {selectedAppointment ? formatDate(selectedAppointment.sched_date) : ''}</Text>
             <Text style={styles.appointmentTimeText}>Time: {formatTime(selectedAppointment?.sched_time)}</Text>
@@ -759,6 +810,7 @@ export default function Notification({ onUnreadUpdate }: NotificationProps) {
   )
 }
 
+// ... (keep all your existing styles exactly the same) ...
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
@@ -936,37 +988,37 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     fontSize: 16,
     color: 'white',
-    top: 5,
+    top: 10,
   },
   appointmentBarberText: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 16,
     color: 'white',
-    top: 5,
+    top: 15,
   },
   appointmentServiceText: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 16,
     color: 'white',
-    top: 10,
+    top: 25,
   },
   appointmentDateText: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 16,
     color: 'white',
-    top: 15,
+    top: 35,
   },
   appointmentTimeText: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 16,
     color: 'white',
-    top: 20,
+    top: 45,
   },
   appointmentTotalText: {
     fontFamily: 'Satoshi-Bold',
     fontSize: 16,
     color: 'white',
-    top: 25,
+    top: 55,
   },
   receiptContainer: {
     width: 320,

@@ -137,6 +137,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontSize: 16,
     fontFamily: 'Satoshi-Regular',
+    color: 'black'
   },
   buttonContainer: {
     flexDirection: 'row',

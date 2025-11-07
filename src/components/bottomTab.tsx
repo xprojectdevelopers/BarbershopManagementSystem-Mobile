@@ -88,8 +88,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 10,
     paddingBottom: 10,
-    borderTopWidth: StyleSheet.hairlineWidth, // Add a subtle top border
-    borderTopColor: '#e0e0e0', // Light gray border color
   },
   bottomTab: {
     justifyContent: 'space-around', // Distribute items evenly

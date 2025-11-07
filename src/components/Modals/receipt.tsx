@@ -8,14 +8,49 @@ interface ReceiptModalProps {
   onCancel?: () => void;
   isCancelled?: boolean;
   children?: React.ReactNode;
+  // Add props for data validation
+  barberName?: string;
+  serviceName?: string;
+  validBarbers?: string[]; // List of known barbers
+  validServices?: string[]; // List of known services
 }
 
-export default function ReceiptModal({ visible, onClose, onCancel, isCancelled, children }: ReceiptModalProps) {
+export default function ReceiptModal({ 
+  visible, 
+  onClose, 
+  onCancel, 
+  isCancelled, 
+  children,
+  barberName,
+  serviceName,
+  validBarbers = [],
+  validServices = []
+}: ReceiptModalProps) {
+  
+  // Validation functions
+  const isValidBarber = (name: string | undefined) => {
+    if (!name) return false;
+    return validBarbers.length === 0 || validBarbers.includes(name);
+  };
+
+  const isValidService = (service: string | undefined) => {
+    if (!service) return false;
+    return validServices.length === 0 || validServices.includes(service);
+  };
+
+  const shouldShowContent = () => {
+    // If no validation arrays provided, always show content
+    if (validBarbers.length === 0 && validServices.length === 0) return true;
+    
+    // Check if both barber and service are valid
+    return isValidBarber(barberName) && isValidService(serviceName);
+  };
+
   return (
     <Modal
       animationType="slide"
       transparent={true}
-      visible={visible}
+      visible={visible && shouldShowContent()} // Only show if content is valid
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
@@ -24,17 +59,28 @@ export default function ReceiptModal({ visible, onClose, onCancel, isCancelled, 
             <AntDesign name="close" size={17} color="black" />
           </TouchableOpacity>
           <View style={styles.contentContainer}>
-            {children}
-            {onCancel && (
-              <TouchableOpacity
-                style={[styles.cancelBtn, isCancelled ? styles.cancelledBtn : null]}
-                onPress={onCancel}
-                disabled={isCancelled}
-              >
-                <Text style={[styles.cancelBtnText, isCancelled ? styles.cancelledBtnText : null]}>
-                  {isCancelled ? 'Cancelled' : 'Cancel Appointment'}
+            {/* Show error message if invalid data */}
+            {!shouldShowContent() ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>
+                  Invalid appointment data. Please contact support.
                 </Text>
-              </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {children}
+                {onCancel && (
+                  <TouchableOpacity
+                    style={[styles.cancelBtn, isCancelled ? styles.cancelledBtn : null]}
+                    onPress={onCancel}
+                    disabled={isCancelled}
+                  >
+                    <Text style={[styles.cancelBtnText, isCancelled ? styles.cancelledBtnText : null]}>
+                      {isCancelled ? 'Cancelled' : 'Cancel Appointment'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </View>
         </View>
@@ -73,6 +119,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     marginTop: 10,
+    width: '100%',
   },
   cancelBtn: {
     marginTop: 20,
@@ -93,5 +140,17 @@ const styles = StyleSheet.create({
   },
   cancelledBtnText: {
     color: '#666666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: 'red',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
