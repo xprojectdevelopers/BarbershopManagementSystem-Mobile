@@ -69,6 +69,7 @@ export default function ChangePasswordModal({ visible, onClose, onConfirm }: Cha
               secureTextEntry
               value={currentPassword}
               onChangeText={setCurrentPassword}
+              placeholderTextColor={'#505050ff'}
             />
 
             <TextInput
@@ -77,6 +78,7 @@ export default function ChangePasswordModal({ visible, onClose, onConfirm }: Cha
               secureTextEntry
               value={newPassword}
               onChangeText={setNewPassword}
+              placeholderTextColor={'#505050ff'}
             />
 
             <TextInput
@@ -85,6 +87,7 @@ export default function ChangePasswordModal({ visible, onClose, onConfirm }: Cha
               secureTextEntry
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              placeholderTextColor={'#505050ff'}
             />
 
             <View style={styles.buttonContainer}>

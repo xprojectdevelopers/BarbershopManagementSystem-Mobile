@@ -435,13 +435,5 @@ const createStyles = (scale: (size: number) => number, verticalScale: (size: num
     zIndex: 1000,
     minHeight: verticalScale(80),
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
   },
 });

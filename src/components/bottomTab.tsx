@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 10,
     paddingBottom: 10,
+    top: 30
   },
   bottomTab: {
     justifyContent: 'space-around', // Distribute items evenly
@@ -99,6 +100,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, // Adjusted padding for better spacing
     paddingVertical: 8,
     // Removed gap property for better responsiveness with space-around
+    bottom: 20
   },
   tabButton: {
     alignItems: 'center',

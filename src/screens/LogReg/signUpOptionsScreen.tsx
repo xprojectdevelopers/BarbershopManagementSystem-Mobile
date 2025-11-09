@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     width: '100%', // Added for better centering consistency
   },
   loginButtonsWrapper: { // Renamed for clarity, from 'loginBtn'
-    bottom: verticalScale(170), // Scaled from 170
+    bottom: verticalScale(130), // Scaled from 170
     alignItems: 'center',
     justifyContent: 'center',
     // Removed 'flex: 1' from here as it caused layout issues

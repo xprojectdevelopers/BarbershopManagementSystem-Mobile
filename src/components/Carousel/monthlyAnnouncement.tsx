@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: verticalScale(40),
+    marginTop: verticalScale(20),
     marginBottom: verticalScale(20),
   },
   scrollView: {
